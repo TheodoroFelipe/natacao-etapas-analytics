@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AcquaMaster/FOZ — Painel Masters</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --navy: #0a1628;
+    --navy2: #112040;
+    --navy3: #1a2f55;
+    --cyan: #00d4ff;
+    --cyan2: #00a8cc;
+    --cyan3: #007799;
+    --amber: #f59e0b;
+    --green: #10b981;
+    --red: #ef4444;
+    --text: #e8f0fe;
+    --muted: #7a92b8;
+    --border: rgba(0,212,255,0.12);
+    --card: rgba(17,32,64,0.8);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+
+  .logo-area h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    letter-spacing: 0.08em;
+    color: var(--cyan);
+    line-height: 1;
+  }
+
+  .logo-area p { font-size: 0.75rem; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 4px; }
+
+  .header-badge {
+    background: rgba(0,212,255,0.08);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    text-align: right;
+  }
+  .header-badge span { display: block; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .header-badge strong { font-family: 'DM Mono', monospace; font-size: 1.4rem; color: var(--cyan); }
+
+  .nav-tabs { display: flex; gap: 4px; margin-bottom: 2rem; background: rgba(0,0,0,0.2); border-radius: 10px; padding: 4px; width: fit-content; }
+
+  .nav-tab {
+    padding: 8px 20px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 7px;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .nav-tab.active { background: var(--navy3); color: var(--cyan); box-shadow: 0 0 0 1px var(--border); }
+  .nav-tab:hover:not(.active) { color: var(--text); }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  .filter-bar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .filter-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; }
+
+  .filter-group { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .filter-chip {
+    padding: 5px 14px;
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 20px;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-chip.active { background: rgba(0,212,255,0.12); border-color: var(--cyan); color: var(--cyan); }
+  .filter-chip:hover:not(.active) { border-color: rgba(0,212,255,0.4); color: var(--text); }
+
+  .filter-sep { width: 1px; height: 28px; background: var(--border); }
+
+  .search-input {
+    flex: 1;
+    min-width: 160px;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    outline: none;
+  }
+  .search-input::placeholder { color: var(--muted); }
+  .search-input:focus { border-color: var(--cyan2); }
+
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+  }
+  .stat-card .stat-val { font-family: 'DM Mono', monospace; font-size: 1.6rem; font-weight: 500; color: var(--cyan); line-height: 1; }
+  .stat-card .stat-lbl { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
+
+  .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+
+  thead tr { background: rgba(0,212,255,0.06); }
+  thead th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  thead th:hover { color: var(--cyan); }
+
+  tbody tr { border-top: 1px solid var(--border); transition: background 0.12s; }
+  tbody tr:hover { background: rgba(0,212,255,0.04); }
+
+  td { padding: 10px 14px; }
+  td.name { font-weight: 500; color: var(--text); }
+  td.year { font-family: 'DM Mono', monospace; color: var(--muted); }
+  td.age { font-family: 'DM Mono', monospace; font-weight: 500; color: var(--cyan); }
+  td.club { color: var(--muted); font-size: 0.8rem; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+  .badge-foz { background: rgba(0,212,255,0.12); color: var(--cyan); border: 1px solid rgba(0,212,255,0.25); }
+  .badge-other { background: rgba(122,146,184,0.12); color: var(--muted); border: 1px solid rgba(122,146,184,0.2); }
+
+  .empty-state { text-align: center; padding: 3rem; color: var(--muted); }
+  .empty-state span { font-size: 2rem; display: block; margin-bottom: 8px; opacity: 0.4; }
+
+  .chart-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 1.5rem; }
+
+  .chart-title h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; color: var(--cyan); letter-spacing: 0.05em; }
+  .chart-title p { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+  .prova-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .prova-tab {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .prova-tab.active { background: rgba(0,212,255,0.12); border-color: var(--cyan); color: var(--cyan); }
+  .prova-tab:hover:not(.active) { border-color: rgba(0,212,255,0.3); color: var(--text); }
+
+  .chart-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+
+  .cmetric {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+  }
+  .cmetric .cm-val { font-family: 'DM Mono', monospace; font-size: 1.3rem; color: var(--cyan); }
+  .cmetric .cm-lbl { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 3px; }
+  .cmetric .cm-sub { font-size: 0.7rem; color: var(--green); margin-top: 2px; }
+
+  .legend-row { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+  .chart-canvas-wrap { position: relative; width: 100%; height: 300px; }
+
+  .chart-note {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(0,212,255,0.05);
+    border-left: 3px solid var(--cyan3);
+    border-radius: 0 6px 6px 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  @media (max-width: 600px) {
+    .logo-area h1 { font-size: 2rem; }
+    header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .filter-bar { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="logo-area">
+      <h1>AcquaMaster/FOZ DO IGUAÇU</h1>
+      <p>Painel Masters — Natação PR/SC · 2026</p>
+    </div>
+    <div class="header-badge">
+      <span>temporada</span>
+      <strong>2026</strong>
+    </div>
+  </header>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('atletas')">Atletas</button>
+    <button class="nav-tab" onclick="switchTab('evolucao')">Evolução de tempos</button>
+  </div>
+
+  <div class="section active" id="sec-atletas">
+
+      <button class="prova-tab" style="margin-bottom: 1rem; border-color: var(--amber); color: var(--amber); font-weight: 500;" onclick="toggleImportBox()">
+          📥 Importar Inscritos do Evento
+      </button>
+
+      <div id="import-box" style="display: none; background: var(--navy2); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <h3 style="font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; color: var(--amber);">Carga Rápida de Atletas</h3>
+              <button class="filter-chip" style="font-size: 0.7rem; padding: 2px 8px; border-color: rgba(245,158,11,0.2); color: var(--amber);" onclick="toggleImportBox()">Ocultar ×</button>
+          </div>
+          <p style="font-size: 0.75rem; color: var(--muted); margin-bottom: 1rem;">
+              Cole as colunas da sua planilha. O interpretador aceita divisões por <strong>TAB (padrão do Excel)</strong> ou <strong>ponto e vírgula (;)</strong>.<br>
+              Ordem recomendada das colunas: <span style="color: var(--cyan)">Nome | Ano Nascimento | Sexo (M/F) | Clube</span>
+          </p>
+
+          <textarea id="raw-data" rows="6" class="search-input" style="width: 100%; height: 130px; font-family: 'DM Mono', monospace; padding: 10px; margin-bottom: 1rem; display: block;" placeholder="Exemplo de cola do Excel:&#10;FELIPE THEODORO GUIMARÃES	1996	M	ACQUAMASTER/FOZ&#10;ANNA SILVA	1992	F	TOLEDO"></textarea>
+
+          <div style="display: flex; gap: 8px;">
+              <button class="filter-chip active" style="background: var(--amber); color: var(--navy); border-color: var(--amber); font-weight: 600;" onclick="processarImportacao()">Substituir Lista Atual</button>
+              <button class="filter-chip" onclick="toggleImportBox()">Cancelar</button>
+          </div>
+      </div>
+      
+    <div class="filter-bar">
+      <span class="filter-label">Sexo</span>
+      <div class="filter-group">
+        <button class="filter-chip active" onclick="setFilter('sex','todos',this)">Todos</button>
+        <button class="filter-chip" onclick="setFilter('sex','M',this)">Masculino</button>
+        <button class="filter-chip" onclick="setFilter('sex','F',this)">Feminino</button>
+      </div>
+      <div class="filter-sep"></div>
+      <span class="filter-label">Faixa etária</span>
+      <div class="filter-group">
+        <button class="filter-chip active" onclick="setFilter('age','todos',this)">Todas</button>
+        <button class="filter-chip" onclick="setFilter('age','30+',this)">30+</button>
+        <button class="filter-chip" onclick="setFilter('age','30-34',this)">30–34</button>
+        <button class="filter-chip" onclick="setFilter('age','35-39',this)">35–39</button>
+        <button class="filter-chip" onclick="setFilter('age','40-44',this)">40–44</button>
+        <button class="filter-chip" onclick="setFilter('age','45-49',this)">45–49</button>
+        <button class="filter-chip" onclick="setFilter('age','50-54',this)">50–54</button>
+        <button class="filter-chip" onclick="setFilter('age','55-59',this)">55–59</button>
+        <button class="filter-chip" onclick="setFilter('age','60+',this)">60+</button>
+      </div>
+      <div class="filter-sep"></div>
+      <input class="search-input" type="text" placeholder="Buscar atleta ou clube..." oninput="filterAthletes()">
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-val" id="st-total">0</div><div class="stat-lbl">Total filtrado</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-m">0</div><div class="stat-lbl">Masculino</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-f">0</div><div class="stat-lbl">Feminino</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-foz">0</div><div class="stat-lbl">AcquaMaster/FOZ</div></div>
+    </div>
+
+    <div style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.15); padding: 1rem; border-radius: 10px; border: 1px solid rgba(0,212,255,0.05);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+        <span class="filter-label" style="margin-bottom: 0;">Inscritos por Categoria (Total do Evento)</span>
+        <button id="toggle-categories-btn" class="filter-chip" style="font-size: 0.72rem; padding: 2px 10px; border-color: rgba(0,212,255,0.3); color: var(--cyan);" onclick="toggleCategoriesBox()">Ocultar Painel</button>
+      </div>
+      <div id="age-distribution-wrap" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px;">
+          </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortBy('name')">#&nbsp; Nome ↕</th>
+            <th onclick="sortBy('year')">Nasc. ↕</th>
+            <th onclick="sortBy('age')">Idade ↕</th>
+            <th>Sexo</th>
+            <th onclick="sortBy('club')">Clube ↕</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty-state" id="empty" style="display:none">
+        <span>🏊</span>
+        Nenhum atleta encontrado com os filtros selecionados.
+      </div>
+    </div>
+  </div>
+
+  <div class="section" id="sec-evolucao">
+    <div class="chart-header">
+      <div class="chart-title">
+        <h2>Felipe Theodoro Guimaraes</h2>
+        <p>Matrícula ABMN 129122 · Faixa 30+ · AcquaMaster/FOZ</p>
+      </div>
+      <div class="prova-tabs" id="provaTabs"></div>
+    </div>
+    <div class="chart-metrics" id="chartMetrics"></div>
+    <div class="chart-card">
+      <div class="legend-row" id="chartLegend"></div>
+      <div class="chart-canvas-wrap">
+        <canvas id="evoChart" role="img" aria-label="Gráfico de evolução de tempos por prova"></canvas>
+      </div>
+      <div class="chart-note" id="chartNote"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ANO_REF = 2026;
+
+let athletes = [
+  { name: 'ACAUÃ ZAMBERLAN', year: 1999, sex: 'M', club: 'C.C MARINGÁ' },
+  { name: 'ADRIANE DEQUI PALMA', year: 1977, sex: 'F', club: 'ACQUAMASTER/FOZ' },
+  { name: 'ALESSANDRA BONACIN BUTKIEWICZ', year: 1977, sex: 'F', club: 'SANTA MONICA' },
+  { name: 'ALMIR ROGERIO DENIG BANDEIRA', year: 1971, sex: 'M', club: 'TOLEDO' },
+  { name: 'ARNALDO DEHE NETO', year: 1959, sex: 'M', club: 'APAN MARINGÁ-PR' },
+  { name: 'CARLA HORST VAINE', year: 1981, sex: 'F', club: 'DKM SPORTS' },
+  { name: 'CARLO FABIANO TANNOURI', year: 1975, sex: 'M', club: 'ACQUAMASTER/FOZ' },
+  { name: 'CARLOS ALBERTO FERNANDES DA SILVA', year: 1957, sex: 'M', club: 'C.C MARINGÁ' },
+  { name: 'CARLOS SUMI', year: 1960, sex: 'M', club: 'TOLEDO' },
+  { name: 'CELIO CARNEIRO DO AMARAL', year: 1949, sex: 'M', club: 'AMARAL MASTERS' },
+  { name: 'EDUARDO MARAFON', year: 1982, sex: 'M', club: 'DKM SPORTS' },
+  { name: 'ELAINE SEFRIAN PEINADO', year: 1987, sex: 'F', club: 'TOLEDO' },
+  { name: 'ELIZANGELA APARECIDA SILVA', year: 1978, sex: 'F', club: 'APAN MARINGÁ-PR' },
+  { name: 'FABIO CARNEIRO BARBOSA', year: 1970, sex: 'M', club: 'FÁBRICA DE NADADORES' },
+  { name: 'FABIO IEGER', year: 1982, sex: 'M', club: 'SANTA MONICA' },
+  { name: 'FABIO RICARDO MARQUES', year: 1977, sex: 'M', club: 'SANTA MONICA' },
+  { name: 'FÁBIO KOKI KITAHARA', year: 1980, sex: 'M', club: '5º NADO' },
+  { name: 'FARIDA YATIYO OKUHARA', year: 1969, sex: 'F', club: 'C.C MARINGÁ' },
+  { name: 'FELIPE DE A C LUIZ', year: 1980, sex: 'M', club: 'CURITIBANO' },
+  { name: 'FELIPE DE DEUS', year: 1993, sex: 'M', club: 'SANTA MONICA' },
+  { name: 'FLAVIO HENRIQUE DA ROSA UREN', year: 1959, sex: 'M', club: 'DKM SPORTS' },
+  { name: 'FLÁVIA DOS REIS PENTEADO SUZUKI', year: 1988, sex: 'F', club: 'FÁBRICA DE NADADORES' },
+  { name: 'FRANCISCO FRUET', year: 1953, sex: 'M', club: 'CURITIBANO' },
+  { name: 'FRIEDRICH WOLFRAM SCHILLER', year: 1964, sex: 'M', club: 'TOLEDO' },
+  { name: 'GABRIEL JONATHAN SOUSA ANDRADE', year: 1994, sex: 'M', club: 'MASTER ACQUAFLY' },
+  { name: 'GILSON SERGIO MARTINS', year: 1968, sex: 'M', club: 'ACQUAMASTER/FOZ' },
+  { name: 'GISLAINE HRYCYK PINHEIRO', year: 1981, sex: 'F', club: 'SANTA MONICA' },
+  { name: 'GLAUCO ALVES DA SILVA', year: 1964, sex: 'M', club: 'C.C MARINGÁ' },
+  { name: 'JANAINA MENEGHETTI', year: 1981, sex: 'F', club: 'APCEF PR' },
+  { name: 'JHONATAN HENRIQUE DELFINO MACHADO', year: 1991, sex: 'M', club: 'FÁBRICA DE NADADORES' },
+  { name: 'JOAO RAFAEL RONSONI', year: 1990, sex: 'M', club: 'ACQUAMASTER/FOZ' },
+  { name: 'JOÃO GUILHERME FIORI ORTEGA', year: 1999, sex: 'M', club: 'APAN MARINGÁ-PR' },
+  { name: 'JUNIOR CUSTÓDIO ZAMPAR', year: 1983, sex: 'M', club: 'DKM SPORTS' },
+  { name: 'LUCIANO GARDANO ELIAS BUCHARLES', year: 1970, sex: 'M', club: 'LONDRINA CC' },
+  { name: 'LUCAS RODRIGUES MACHADO', year: 1988, sex: 'M', club: 'SANTA MONICA' },
+  { name: 'LUIS PAULO GOMES MASCARENHAS', year: 1971, sex: 'M', club: 'C. M. PARANÁ' },
+  { name: 'LUIZA NISHI PIGATTO', year: 1995, sex: 'F', club: 'APAN MARINGÁ-PR' },
+  { name: 'LYS ROSITA BOEIRA LOCATELLI', year: 1955, sex: 'F', club: 'C. M. PARANÁ' },
+  { name: 'LÍVIA VANZELI DE MARIA', year: 1995, sex: 'F', club: 'ACQUAMASTER/FOZ' },
+  { name: 'MANOEL JOAQUIM DE OLIVEIRA', year: 1955, sex: 'M', club: 'TOLEDO' },
+  { name: 'MARCELO GECHELE CLETO', year: 1962, sex: 'M', club: 'AMARAL MASTERS' },
+  { name: 'MARCIO FACCI JUNIOR', year: 1990, sex: 'M', club: 'APAN MARINGÁ-PR' },
+  { name: 'MARISTELA CAVICCHIOLI MAKRAKIS', year: 1969, sex: 'F', club: 'TOLEDO' },
+  { name: 'MAURICIO ISTAKE', year: 1979, sex: 'M', club: 'FÁBRICA DE NADADORES' },
+  { name: 'MIRIAN AYUMI KURAUTI', year: 1991, sex: 'F', club: 'USSR/UNICAMP' },
+  { name: 'NELSON A SANDER', year: 1959, sex: 'M', club: 'TOLEDO' },
+  { name: 'NILO JOJI MORISHITA', year: 1963, sex: 'M', club: 'ML TEAM' },
+  { name: 'PENELOPE ADRIANE LIEBL', year: 1982, sex: 'F', club: 'APCEF PR' },
+  { name: 'RENAN DA SILVA TRINTIN', year: 1990, sex: 'M', club: 'APAN MARINGÁ-PR' },
+  { name: 'RENATO MARTINS SIMOES', year: 1975, sex: 'M', club: 'HARMONIA CLUBE DE CAMPO - UMUARAMA' },
+  { name: 'RICARDO GOBETTI SUZUKI', year: 1986, sex: 'M', club: 'FÁBRICA DE NADADORES' },
+  { name: 'ROBERTO SIMEAO RONCATO', year: 1966, sex: 'M', club: 'TOLEDO' },
+  { name: 'RODRIGO GOUVEIA DE OLIVEIRA NOBRE', year: 1976, sex: 'M', club: 'ACQUAMASTER/FOZ' },
+  { name: 'ROSELI FERNANDES ALVES SILVA', year: 1961, sex: 'F', club: 'DKM SPORTS' },
+  { name: 'RUDÁ RYUITI FURUKITA BAPTISTA', year: 1988, sex: 'M', club: 'WINNERS' },
+  { name: 'SERGIO MAKRAKIS', year: 1961, sex: 'M', club: 'TOLEDO' },
+  { name: 'SILVANA SCHIMITI YAMACITA', year: 1961, sex: 'F', club: 'DKM SPORTS' },
+  { name: 'SILVIO SAITI IWATA', year: 1959, sex: 'M', club: 'C.C MARINGÁ' },
+  { name: 'TEOTONIO JOSÉ DE SOUZA JUNIOR', year: 1992, sex: 'M', club: 'ACQUAMASTER/FOZ' },
+  { name: 'TIAGO JUNIOR DOS SANTOS', year: 1988, sex: 'M', club: 'APCEF PR' },
+  { name: 'VINÍCIUS DOS REIS VIEIRA', year: 1998, sex: 'M', club: 'TOLEDO' },
+  { name: 'WILYAM TETSUO GONDO', year: 1989, sex: 'M', club: 'TOLEDO' },
+  { name: 'ZEILA SILVA', year: 1951, sex: 'F', club: 'AMARAL MASTERS' },
+  { name: 'ZILDA BENKENDORF MAIOCHI', year: 1953, sex: 'F', club: 'DKM SPORTS' },
+];
+
+function mapearAtletas(lista) {
+  return lista.map(a => ({ ...a, age: ANO_REF - a.year }));
+}
+
+athletes = mapearAtletas(athletes);
+
+let filters = { sex: 'todos', age: 'todos' };
+let sortCol = 'name';
+let sortDir = 1;
+
+function setFilter(type, val, btn) {
+  filters[type] = val;
+  btn.closest('.filter-group').querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterAthletes();
+}
+
+function matchAge(age) {
+  if (filters.age === 'todos') return true;
+  if (filters.age === '30+') return age >= 30;
+  if (filters.age === '30-34') return age >= 30 && age <= 34;
+  if (filters.age === '35-39') return age >= 35 && age <= 39;
+  if (filters.age === '40-44') return age >= 40 && age <= 44;
+  if (filters.age === '45-49') return age >= 45 && age <= 49;
+  if (filters.age === '50-54') return age >= 50 && age <= 54;
+  if (filters.age === '55-59') return age >= 55 && age <= 59;
+  if (filters.age === '60+') return age >= 60;
+  return true;
+}
+
+function filterAthletes() {
+  const q = document.querySelector('.search-input').value.toLowerCase();
+  let list = athletes.filter(a => {
+    if (filters.sex !== 'todos' && a.sex !== filters.sex) return false;
+    if (!matchAge(a.age)) return false;
+    if (q && !a.name.toLowerCase().includes(q) && !a.club.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  list.sort((a, b) => {
+    let va = a[sortCol], vb = b[sortCol];
+    if (typeof va === 'string') va = va.toLowerCase();
+    if (typeof vb === 'string') vb = vb.toLowerCase();
+    return va < vb ? -sortDir : va > vb ? sortDir : 0;
+  });
+
+  renderTable(list);
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = 1; }
+  filterAthletes();
+}
+
+function renderTable(list) {
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('empty');
+
+  document.getElementById('st-total').textContent = list.length;
+  document.getElementById('st-m').textContent = list.filter(a => a.sex === 'M').length;
+  document.getElementById('st-f').textContent = list.filter(a => a.sex === 'F').length;
+  document.getElementById('st-foz').textContent = list.filter(a => a.club === 'ACQUAMASTER/FOZ').length;
+
+  if (!list.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = list.map((a, i) => `
+    <tr>
+      <td class="name">${i + 1}. ${toTitleCase(a.name)}</td>
+      <td class="year">${a.year}</td>
+      <td class="age">${a.age}</td>
+      <td><span style="font-size:0.75rem;color:${a.sex==='M'?'#00d4ff':'#f472b6'}">${a.sex}</span></td>
+      <td class="club"><span class="badge ${a.club === 'ACQUAMASTER/FOZ' ? 'badge-foz' : 'badge-other'}">${a.club}</span></td>
+    </tr>
+  `).join('');
+}
+
+function toTitleCase(s) {
+  const lower = ['DE','DA','DO','DOS','DAS','E','A','O'];
+  return s.split(' ').map((w, i) => {
+    if (i > 0 && lower.includes(w)) return w.charAt(0) + w.slice(1).toLowerCase();
+    return w.charAt(0) + w.slice(1).toLowerCase();
+  }).join(' ');
+}
+
+const provas = {
+  peito50: {
+    label: '50m Peito',
+    metrics: { record: '41.61', evento: '1º · Londrina mai/26', melhora: '−4.0s vs mar/25' },
+    sets: [
+      { label: '25m', color: '#00d4ff', dash: [],
+        pts: [
+          { x: '06/2024', y: 110.20 },
+          { x: '03/2025', y: 42.60 },
+          { x: '06/2025', y: 45.80 },
+          { x: '05/2026', y: 41.61 }
+        ]
+      },
+      { label: '50m', color: '#10b981', dash: [5,4],
+        pts: [
+          { x: '08/2024', y: 46.20 },
+          { x: '08/2025', y: 44.06 }
+        ]
+      }
+    ],
+    note: 'Prova principal. Recorde pessoal de 41.61s em mai/2026 (1º lugar). Evolução consistente tanto no 25m quanto no 50m.'
+  },
+  livre50: {
+    label: '50m Livre',
+    metrics: { record: '38.34', evento: '8º · Curitiba mar/25', melhora: '−2.1s vs jun/24' },
+    sets: [
+      { label: '25m', color: '#00d4ff', dash: [],
+        pts: [
+          { x: '06/2024', y: 40.41 },
+          { x: '03/2025', y: 38.34 }
+        ]
+      },
+      { label: '50m', color: '#10b981', dash: [5,4],
+        pts: [
+          { x: '08/2024', y: 39.89 },
+          { x: '08/2025', y: 39.02 }
+        ]
+      }
+    ],
+    note: 'Record pessoal de 38.34 (25m, mar/2025). No 50m melhora gradual: 39.89 → 39.02. DQL em set/2025 não computada.'
+  },
+  peito100: {
+    label: '100m Peito',
+    metrics: { record: '1:45.07', evento: '2º · Curitiba ago/25', melhora: '−5.1s (50m)' },
+    sets: [
+      { label: '25m', color: '#00d4ff', dash: [],
+        pts: [
+          { x: '06/2024', y: 110.20 },
+          { x: '06/2025', y: 107.00 },
+          { x: '11/2025', y: 110.65 },
+          { x: '05/2026', y: 117.44 }
+        ]
+      },
+      { label: '50m', color: '#10b981', dash: [5,4],
+        pts: [
+          { x: '08/2025', y: 105.07 }
+        ]
+      }
+    ],
+    note: 'Melhor 25m: 1:47.00 (jun/2025). Recorde no 50m: 1:45.07 (ago/2025). Prova com maior número de 2º lugares.'
+  },
+  livre100: {
+    label: '100m Livre',
+    metrics: { record: '1:29.69', evento: '5º · Floripa set/25', melhora: '−7.7s vs 2024' },
+    sets: [
+      { label: '25m', color: '#00d4ff', dash: [],
+        pts: [
+          { x: '09/2024', y: 97.35 },
+          { x: '04/2025', y: 106.71 },
+          { x: '09/2025', y: 89.69 }
+        ]
+      },
+      { label: '50m', color: '#10b981', dash: [5,4],
+        pts: [
+          { x: '08/2024', y: 97.33 }
+        ]
+      }
+    ],
+    note: 'Salto expressivo: 1:37 → 1:29 no 25m entre 2024 e set/2025. Maior melhora percentual registrada.'
+  },
+  peito200: {
+    label: '200m Peito',
+    metrics: { record: '3:54.37', evento: '2º · Londrina abr/25', melhora: '2 provas' },
+    sets: [
+      { label: '25m', color: '#00d4ff', dash: [],
+        pts: [
+          { x: '04/2025', y: 234.37 },
+          { x: '05/2026', y: 237.44 }
+        ]
+      }
+    ],
+    note: 'Disputada apenas 2x, ambas com 2º lugar e tempos bem próximos (~3:54/3:57). Consistência elevada.'
+  }
+};
+
+let currentChart = null;
+let activeProva = 'peito50';
+
+function buildProvaTabs() {
+  const wrap = document.getElementById('provaTabs');
+  wrap.innerHTML = Object.entries(provas).map(([k, v]) =>
+    `<button class="prova-tab ${k === activeProva ? 'active' : ''}" onclick="selectProva('${k}',this)">${v.label}</button>`
+  ).join('');
+}
+
+function selectProva(key, btn) {
+  activeProva = key;
+  document.querySelectorAll('.prova-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart(key);
+}
+
+function renderChart(key) {
+  const p = provas[key];
+
+  document.getElementById('chartMetrics').innerHTML = `
+    <div class="cmetric"><div class="cm-val">${p.metrics.record}</div><div class="cm-lbl">Recorde pessoal</div><div class="cm-sub">${p.metrics.evento}</div></div>
+    <div class="cmetric"><div class="cm-val" style="color:var(--green)">${p.metrics.melhora}</div><div class="cm-lbl">Evolução</div><div class="cm-sub">vs. primeira marca</div></div>
+    <div class="cmetric"><div class="cm-val">${p.sets.reduce((a,s)=>a+s.pts.length,0)}</div><div class="cm-lbl">Marcas registradas</div><div class="cm-sub">nas duas piscinas</div></div>
+  `;
+
+  document.getElementById('chartLegend').innerHTML = p.sets.map(s =>
+    `<div class="legend-item"><div class="legend-dot" style="background:${s.color}; ${s.dash.length ? 'opacity:0.5' : ''}"></div>${s.label}</div>`
+  ).join('');
+
+  document.getElementById('chartNote').textContent = p.note;
+
+  const allLabels = [...new Set(p.sets.flatMap(s => s.pts.map(pt => pt.x)))].sort((a, b) => {
+    const [am, ay] = a.split('/'); const [bm, by] = b.split('/');
+    return (+ay * 12 + +am) - (+by * 12 + +bm);
+  });
+
+  const datasets = p.sets.map(s => ({
+    label: s.label,
+    data: allLabels.map(l => { const pt = s.pts.find(p => p.x === l); return pt ? pt.y : null; }),
+    borderColor: s.color,
+    backgroundColor: s.color + '18',
+    borderDash: s.dash,
+    borderWidth: 2.5,
+    pointRadius: 6,
+    pointBackgroundColor: s.color,
+    pointHoverRadius: 8,
+    tension: 0.35,
+    spanGaps: false
+  }));
+
+  if (currentChart) currentChart.destroy();
+
+  currentChart = new Chart(document.getElementById('evoChart'), {
+    type: 'line',
+    data: { labels: allLabels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#112040',
+          borderColor: 'rgba(0,212,255,0.3)',
+          borderWidth: 1,
+          titleColor: '#00d4ff',
+          bodyColor: '#7a92b8',
+          callbacks: {
+            label: ctx => {
+              const v = ctx.raw;
+              if (v === null) return '';
+              const m = Math.floor(v / 60);
+              const s = (v % 60).toFixed(2);
+              return ` ${ctx.dataset.label}: ${m > 0 ? m + ':' + s.padStart(5, '0') : s + 's'}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(0,212,255,0.06)' },
+          ticks: { color: '#7a92b8', font: { size: 11, family: 'DM Mono' } }
+        },
+        y: {
+          reverse: true,
+          grid: { color: 'rgba(0,212,255,0.06)' },
+          ticks: {
+            color: '#7a92b8',
+            font: { size: 11, family: 'DM Mono' },
+            callback: v => {
+              const m = Math.floor(v / 60);
+              const s = (v % 60).toFixed(0);
+              return m > 0 ? m + ':' + String(s).padStart(2, '0') : s + 's';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ===================== LOGICA CORRIGIDA DOS BOTÕES INTERATIVOS =====================
+function toggleImportBox() {
+  const box = document.getElementById('import-box');
+  box.style.display = (box.style.display === 'none' || box.style.display === '') ? 'block' : 'none';
+}
+
+function toggleCategoriesBox() {
+  const wrap = document.getElementById('age-distribution-wrap');
+  const btn = document.getElementById('toggle-categories-btn');
+  
+  // Se estiver visível (ou se o display for vazio por padrão do grid), esconde
+  if (wrap.style.display === 'none') {
+    wrap.style.display = 'grid';
+    btn.textContent = 'Ocultar Painel';
+    btn.style.color = 'var(--cyan)';
+    btn.style.borderColor = 'rgba(0,212,255,0.3)';
+  } else {
+    wrap.style.display = 'none';
+    btn.textContent = 'Mostrar Painel';
+    btn.style.color = 'var(--muted)';
+    btn.style.borderColor = 'rgba(255,255,255,0.1)';
+  }
+}
+
+function processarImportacao() {
+  const inputTexto = document.getElementById('raw-data').value;
+  if (!inputTexto.trim()) {
+    alert('Por favor, cole os dados antes de processar.');
+    return;
+  }
+
+  const linhas = inputTexto.split('\n');
+  const listaNova = [];
+
+  linhas.forEach(linha => {
+    if (!linha.trim()) return; 
+
+    let colunas = inlineSplit(linha);
+
+    if (colunas.length >= 4) {
+      const name = colunas[0].trim().toUpperCase();
+      const year = parseInt(colunas[1].trim());
+      const sex = colunas[2].trim().toUpperCase();
+      const club = colunas[3].trim().toUpperCase();
+
+      if (name && !isNaN(year) && (sex === 'M' || sex === 'F') && club) {
+        listaNova.push({ name, year, sex, club });
+      }
+    }
+  });
+
+  if (listaNova.length > 0) {
+    athletes = mapearAtletas(listaNova);
+    filterAthletes();
+    atualizarAnaliseCategorias(); 
+
+    document.getElementById('raw-data').value = '';
+    toggleImportBox();
+
+    alert(`Sucesso! ${listaNova.length} atletas foram carregados para este evento.`);
+  } else {
+    alert('Erro: Não foi possível identificar o padrão de dados. Certifique-se de que copiou as 4 colunas (Nome, Ano, Sexo, Clube).');
+  }
+}
+
+function inlineSplit(line) {
+  if (line.includes('\t')) return line.split('\t');
+  return line.split(';');
+}
+
+function atualizarAnaliseCategorias() {
+  const definirFaixa = (age) => {
+    if (age < 30) return 'Sub-30';
+    if (age >= 30 && age <= 34) return '30–34';
+    if (age >= 35 && age <= 39) return '35–39';
+    if (age >= 40 && age <= 44) return '40–44';
+    if (age >= 45 && age <= 49) return '45–49';
+    if (age >= 50 && age <= 54) return '50–54';
+    if (age >= 55 && age <= 59) return '55–59';
+    return '60+';
+  };
+
+  const categorias = {
+    'Sub-30': 0, '30–34': 0, '35–39': 0, '40–44': 0, '45–49': 0, '50–54': 0, '55–59': 0, '60+': 0
+  };
+
+  athletes.forEach(a => {
+    const faixa = definirFaixa(a.age);
+    if (categorias[faixa] !== undefined) {
+      categorias[faixa]++;
+    }
+  });
+
+  const wrap = document.getElementById('age-distribution-wrap');
+  if (!wrap) return;
+
+  wrap.innerHTML = Object.entries(categorias)
+    .map(([faixa, total]) => {
+      const temAtleta = total > 0;
+      const opacity = temAtleta ? '1' : '0.25';
+      const borderStyle = temAtleta ? '1px solid rgba(0,212,255,0.25)' : '1px solid rgba(255,255,255,0.05)';
+      const numColor = temAtleta ? 'var(--cyan)' : 'var(--muted)';
+
+      return `
+        <div style="background: var(--card); border: ${borderStyle}; border-radius: 8px; padding: 0.6rem; text-align: center; opacity: ${opacity}; transition: all 0.2s;">
+          <div style="font-size: 0.68rem; color: var(--muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">${faixa}</div>
+          <div style="font-family: 'DM Mono', monospace; font-size: 1.25rem; font-weight: 500; color: ${numColor}; margin-top: 2px;">${total}</div>
+        </div>
+      `;
+    }).join('');
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('sec-' + tab).classList.add('active');
+
+  if (tab === 'evolucao' && !currentChart) renderChart(activeProva);
+}
+
+filterAthletes();
+buildProvaTabs();
+atualizarAnaliseCategorias(); 
+</script>
+</body>
+</html>
