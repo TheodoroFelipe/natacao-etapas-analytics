@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AcquaMaster/FOZ — Painel Masters</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --navy: #0a1628; --navy2: #112040; --navy3: #1a2f55;
+    --cyan: #00d4ff; --cyan2: #00a8cc; --cyan3: #007799;
+    --amber: #f59e0b; --green: #10b981; --red: #ef4444;
+    --text: #e8f0fe; --muted: #7a92b8;
+    --border: rgba(0,212,255,0.12); --card: rgba(17,32,64,0.8);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--navy); color:var(--text); min-height:100vh; overflow-x:hidden; }
+  body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(0,212,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.03) 1px,transparent 1px); background-size:40px 40px; pointer-events:none; z-index:0; }
+  .page { position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:2rem 1.5rem; }
+
+  header { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:2.5rem; padding-bottom:1.5rem; border-bottom:1px solid var(--border); }
+  .logo-area h1 { font-family:'Bebas Neue',sans-serif; font-size:3rem; letter-spacing:0.08em; color:var(--cyan); line-height:1; }
+  .logo-area p { font-size:0.75rem; color:var(--muted); letter-spacing:0.15em; text-transform:uppercase; margin-top:4px; }
+  .header-badge { background:rgba(0,212,255,0.08); border:1px solid var(--border); border-radius:8px; padding:0.5rem 1rem; text-align:right; }
+  .header-badge span { display:block; font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; }
+  .header-badge strong { font-family:'DM Mono',monospace; font-size:1.4rem; color:var(--cyan); }
+
+  .nav-tabs { display:flex; gap:4px; margin-bottom:2rem; background:rgba(0,0,0,0.2); border-radius:10px; padding:4px; width:fit-content; }
+  .nav-tab { padding:8px 20px; border:none; background:transparent; color:var(--muted); font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:500; cursor:pointer; border-radius:7px; transition:all 0.2s; letter-spacing:0.02em; }
+  .nav-tab.active { background:var(--navy3); color:var(--cyan); box-shadow:0 0 0 1px var(--border); }
+  .nav-tab:hover:not(.active) { color:var(--text); }
+
+  .section { display:none; }
+  .section.active { display:block; }
+
+  /* Filter bar */
+  .filter-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1rem 1.25rem; margin-bottom:1.5rem; }
+  .filter-label { font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; white-space:nowrap; }
+  .filter-group { display:flex; gap:6px; flex-wrap:wrap; }
+  .filter-chip { padding:5px 14px; border:1px solid rgba(0,212,255,0.2); border-radius:20px; background:transparent; color:var(--muted); font-family:'DM Sans',sans-serif; font-size:0.8rem; cursor:pointer; transition:all 0.15s; }
+  .filter-chip.active { background:rgba(0,212,255,0.12); border-color:var(--cyan); color:var(--cyan); }
+  .filter-chip:hover:not(.active) { border-color:rgba(0,212,255,0.4); color:var(--text); }
+  .filter-sep { width:1px; height:28px; background:var(--border); }
+  .search-input { flex:1; min-width:160px; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.85rem; padding:6px 12px; outline:none; }
+  .search-input::placeholder { color:var(--muted); }
+  .search-input:focus { border-color:var(--cyan2); }
+
+  /* Stats */
+  .stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:1.5rem; }
+  .stat-card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:0.75rem 1rem; }
+  .stat-card .stat-val { font-family:'DM Mono',monospace; font-size:1.6rem; font-weight:500; color:var(--cyan); line-height:1; }
+  .stat-card .stat-lbl { font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-top:4px; }
+
+  /* Table */
+  .table-wrap { overflow-x:auto; border-radius:12px; border:1px solid var(--border); }
+  table { width:100%; border-collapse:collapse; font-size:0.875rem; }
+  thead tr { background:rgba(0,212,255,0.06); }
+  thead th { padding:10px 14px; text-align:left; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); font-weight:500; white-space:nowrap; cursor:pointer; user-select:none; }
+  thead th:hover { color:var(--cyan); }
+  tbody tr { border-top:1px solid var(--border); transition:background 0.12s; }
+  tbody tr:hover { background:rgba(0,212,255,0.04); }
+  td { padding:10px 14px; }
+  td.name { font-weight:500; color:var(--text); }
+  td.year { font-family:'DM Mono',monospace; color:var(--muted); }
+  td.age { font-family:'DM Mono',monospace; font-weight:500; color:var(--cyan); }
+  td.club { color:var(--muted); font-size:0.8rem; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:0.7rem; font-weight:600; letter-spacing:0.05em; }
+  .badge-foz { background:rgba(0,212,255,0.12); color:var(--cyan); border:1px solid rgba(0,212,255,0.25); }
+  .badge-other { background:rgba(122,146,184,0.12); color:var(--muted); border:1px solid rgba(122,146,184,0.2); }
+  .empty-state { text-align:center; padding:3rem; color:var(--muted); }
+  .empty-state span { font-size:2rem; display:block; margin-bottom:8px; opacity:0.4; }
+
+  /* Chart */
+  .chart-header { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:1.5rem; }
+  .chart-title h2 { font-family:'Bebas Neue',sans-serif; font-size:1.8rem; color:var(--cyan); letter-spacing:0.05em; }
+  .chart-title p { font-size:0.8rem; color:var(--muted); margin-top:2px; }
+  .prova-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+  .prova-tab { padding:6px 14px; border:1px solid var(--border); border-radius:20px; background:transparent; color:var(--muted); font-family:'DM Sans',sans-serif; font-size:0.78rem; cursor:pointer; transition:all 0.15s; }
+  .prova-tab.active { background:rgba(0,212,255,0.12); border-color:var(--cyan); color:var(--cyan); }
+  .prova-tab:hover:not(.active) { border-color:rgba(0,212,255,0.3); color:var(--text); }
+  .chart-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:1.5rem; }
+  .cmetric { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:0.75rem 1rem; }
+  .cmetric .cm-val { font-family:'DM Mono',monospace; font-size:1.3rem; color:var(--cyan); }
+  .cmetric .cm-lbl { font-size:0.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-top:3px; }
+  .cmetric .cm-sub { font-size:0.7rem; color:var(--green); margin-top:2px; }
+  .legend-row { display:flex; gap:16px; margin-bottom:12px; flex-wrap:wrap; }
+  .legend-item { display:flex; align-items:center; gap:6px; font-size:0.78rem; color:var(--muted); }
+  .legend-dot { width:10px; height:10px; border-radius:2px; }
+  .chart-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1.25rem; }
+  .chart-canvas-wrap { position:relative; width:100%; height:300px; }
+  .chart-note { margin-top:12px; padding:10px 14px; background:rgba(0,212,255,0.05); border-left:3px solid var(--cyan3); border-radius:0 6px 6px 0; font-size:0.8rem; color:var(--muted); }
+
+  /* ===== IMPORTAR SECTION ===== */
+  .import-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem; }
+  @media(max-width:700px){ .import-grid { grid-template-columns:1fr; } }
+
+  .import-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; }
+  .import-card h3 { font-family:'Bebas Neue',sans-serif; font-size:1.2rem; color:var(--cyan); letter-spacing:0.05em; margin-bottom:0.75rem; }
+  .import-card p { font-size:0.82rem; color:var(--muted); line-height:1.6; margin-bottom:1rem; }
+
+  .drop-zone {
+    border:2px dashed rgba(0,212,255,0.25);
+    border-radius:10px;
+    padding:2.5rem 1rem;
+    text-align:center;
+    cursor:pointer;
+    transition:all 0.2s;
+    position:relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over { border-color:var(--cyan); background:rgba(0,212,255,0.05); }
+  .drop-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+  .drop-zone .dz-icon { font-size:2.5rem; margin-bottom:0.5rem; display:block; }
+  .drop-zone .dz-text { font-size:0.85rem; color:var(--muted); }
+  .drop-zone .dz-sub { font-size:0.72rem; color:var(--cyan3); margin-top:4px; }
+
+  .btn-primary { display:inline-flex; align-items:center; gap:8px; padding:10px 20px; background:var(--cyan); color:var(--navy); font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:600; border:none; border-radius:8px; cursor:pointer; transition:all 0.15s; }
+  .btn-primary:hover { background:var(--cyan2); }
+  .btn-primary:disabled { opacity:0.4; cursor:not-allowed; }
+
+  .btn-secondary { display:inline-flex; align-items:center; gap:8px; padding:10px 20px; background:transparent; color:var(--cyan); font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:500; border:1px solid var(--border); border-radius:8px; cursor:pointer; transition:all 0.15s; }
+  .btn-secondary:hover { border-color:var(--cyan); background:rgba(0,212,255,0.06); }
+
+  .btn-danger { display:inline-flex; align-items:center; gap:8px; padding:8px 16px; background:rgba(239,68,68,0.1); color:var(--red); font-family:'DM Sans',sans-serif; font-size:0.82rem; font-weight:500; border:1px solid rgba(239,68,68,0.25); border-radius:8px; cursor:pointer; transition:all 0.15s; }
+  .btn-danger:hover { background:rgba(239,68,68,0.2); }
+
+  .preview-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:1rem; flex-wrap:wrap; }
+  .preview-header h3 { font-family:'Bebas Neue',sans-serif; font-size:1.2rem; color:var(--cyan); letter-spacing:0.05em; }
+
+  .tag-ok { display:inline-block; padding:2px 8px; border-radius:4px; font-size:0.7rem; font-weight:600; background:rgba(16,185,129,0.12); color:var(--green); border:1px solid rgba(16,185,129,0.25); }
+  .tag-warn { display:inline-block; padding:2px 8px; border-radius:4px; font-size:0.7rem; font-weight:600; background:rgba(245,158,11,0.12); color:var(--amber); border:1px solid rgba(245,158,11,0.25); }
+  .tag-err { display:inline-block; padding:2px 8px; border-radius:4px; font-size:0.7rem; font-weight:600; background:rgba(239,68,68,0.12); color:var(--red); border:1px solid rgba(239,68,68,0.25); }
+
+  .import-log { background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:8px; padding:1rem; font-family:'DM Mono',monospace; font-size:0.75rem; color:var(--muted); max-height:180px; overflow-y:auto; margin-top:1rem; white-space:pre-wrap; line-height:1.6; }
+  .import-log .log-ok { color:var(--green); }
+  .import-log .log-warn { color:var(--amber); }
+  .import-log .log-err { color:var(--red); }
+
+  .progress-bar-wrap { height:6px; background:rgba(0,212,255,0.1); border-radius:3px; margin:1rem 0; overflow:hidden; display:none; }
+  .progress-bar { height:100%; background:var(--cyan); border-radius:3px; transition:width 0.3s; }
+
+  .col-map { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:1rem; }
+  .col-map label { font-size:0.75rem; color:var(--muted); display:block; margin-bottom:3px; }
+  .col-map select { width:100%; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.82rem; padding:6px 8px; outline:none; }
+  .col-map select:focus { border-color:var(--cyan2); }
+
+  .alert-box { padding:12px 16px; border-radius:8px; font-size:0.82rem; margin-bottom:1rem; }
+  .alert-info { background:rgba(0,212,255,0.06); border:1px solid rgba(0,212,255,0.2); color:var(--muted); }
+  .alert-success { background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); color:var(--green); }
+  .alert-error { background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); color:var(--red); }
+
+  .template-cols { display:flex; gap:8px; flex-wrap:wrap; margin-top:0.5rem; }
+  .template-col { font-family:'DM Mono',monospace; font-size:0.72rem; background:rgba(0,212,255,0.08); color:var(--cyan); padding:3px 8px; border-radius:4px; border:1px solid var(--border); }
+
+  /* ===== BALIZAMENTO ===== */
+  .bal-header-info { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1rem 1.5rem; margin-bottom:1.5rem; display:flex; flex-wrap:wrap; gap:1.5rem; align-items:center; }
+  .bal-info-item { display:flex; flex-direction:column; }
+  .bal-info-item span { font-size:0.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; }
+  .bal-info-item strong { font-size:0.92rem; color:var(--text); margin-top:2px; }
+
+  .bal-filter-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:1.5rem; }
+  .bal-search { flex:1; min-width:180px; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.85rem; padding:7px 12px; outline:none; }
+  .bal-search:focus { border-color:var(--cyan2); }
+  .bal-toggle { padding:6px 14px; border:1px solid var(--border); border-radius:20px; background:transparent; color:var(--muted); font-family:'DM Sans',sans-serif; font-size:0.8rem; cursor:pointer; transition:all 0.15s; }
+  .bal-toggle.active { background:rgba(0,212,255,0.12); border-color:var(--cyan); color:var(--cyan); }
+
+  .bal-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:10px; margin-bottom:1.5rem; }
+
+  .prova-block { margin-bottom:1.5rem; border-radius:12px; overflow:hidden; border:1px solid var(--border); }
+  .prova-block-header { display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; background:rgba(0,212,255,0.06); cursor:pointer; user-select:none; gap:12px; flex-wrap:wrap; }
+  .prova-block-header:hover { background:rgba(0,212,255,0.1); }
+  .prova-num { font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--cyan); letter-spacing:0.05em; white-space:nowrap; }
+  .prova-name { font-size:0.88rem; font-weight:500; color:var(--text); }
+  .prova-meta { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .prova-time { font-family:'DM Mono',monospace; font-size:0.75rem; color:var(--muted); }
+  .prova-foz-count { font-size:0.72rem; padding:2px 8px; border-radius:4px; background:rgba(0,212,255,0.1); color:var(--cyan); border:1px solid rgba(0,212,255,0.2); white-space:nowrap; }
+  .prova-chevron { color:var(--muted); font-size:0.8rem; transition:transform 0.2s; }
+  .prova-block.collapsed .prova-chevron { transform:rotate(-90deg); }
+
+  .prova-body { display:block; }
+  .prova-block.collapsed .prova-body { display:none; }
+
+  .serie-block { border-top:1px solid var(--border); }
+  .serie-label { padding:6px 1rem; font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.12em; background:rgba(0,0,0,0.15); display:flex; justify-content:space-between; }
+
+  .bal-table { width:100%; border-collapse:collapse; font-size:0.83rem; }
+  .bal-table td { padding:8px 12px; border-top:1px solid rgba(0,212,255,0.06); vertical-align:middle; }
+  .bal-table tr:hover td { background:rgba(0,212,255,0.03); }
+  .bal-table tr.foz-row td { background:rgba(0,212,255,0.05); }
+  .bal-table tr.foz-row td:first-child { border-left:3px solid var(--cyan); }
+  .bal-table tr.highlight-row td { background:rgba(245,158,11,0.07); }
+  .bal-table tr.highlight-row td:first-child { border-left:3px solid var(--amber); }
+
+  .raia-num { font-family:'DM Mono',monospace; font-weight:600; color:var(--cyan); width:36px; text-align:center; }
+  .bal-atleta { font-weight:500; }
+  .bal-atleta .matr { font-family:'DM Mono',monospace; font-size:0.7rem; color:var(--muted); margin-left:6px; }
+  .bal-faixa { font-size:0.72rem; padding:1px 6px; border-radius:3px; background:rgba(122,146,184,0.12); color:var(--muted); border:1px solid rgba(122,146,184,0.2); white-space:nowrap; }
+  .bal-clube { font-size:0.78rem; color:var(--muted); }
+  .bal-tempo { font-family:'DM Mono',monospace; font-size:0.82rem; color:var(--text); white-space:nowrap; }
+  .bal-tempo.st { color:var(--muted); font-style:italic; }
+
+  .no-results-bal { text-align:center; padding:2.5rem; color:var(--muted); font-size:0.88rem; }
+
+  @media(max-width:600px){
+    .logo-area h1 { font-size:2rem; }
+    header { flex-direction:column; align-items:flex-start; gap:12px; }
+    .filter-bar { flex-direction:column; align-items:flex-start; }
+    .bal-table td { padding:6px 8px; font-size:0.78rem; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="logo-area">
+      <h1>AcquaMaster/FOZ</h1>
+      <p>Painel Masters — Natação PR/SC · <span id="hdr-year">2026</span></p>
+    </div>
+    <div class="header-badge">
+      <span>temporada</span>
+      <strong id="hdr-season">2026</strong>
+    </div>
+  </header>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('atletas',this)">Atletas</button>
+    <button class="nav-tab" onclick="switchTab('balizamento',this)">🏊 Balizamento</button>
+    <button class="nav-tab" onclick="switchTab('evolucao',this)">Evolução de Tempos</button>
+    <button class="nav-tab" onclick="switchTab('importar',this)">⬆ Importar Excel</button>
+  </div>
+
+  <!-- ===== SEÇÃO ATLETAS ===== -->
+  <div class="section active" id="sec-atletas">
+    <div class="filter-bar">
+      <span class="filter-label">Sexo</span>
+      <div class="filter-group">
+        <button class="filter-chip active" onclick="setFilter('sex','todos',this)">Todos</button>
+        <button class="filter-chip" onclick="setFilter('sex','M',this)">Masculino</button>
+        <button class="filter-chip" onclick="setFilter('sex','F',this)">Feminino</button>
+      </div>
+      <div class="filter-sep"></div>
+      <span class="filter-label">Faixa etária</span>
+      <div class="filter-group">
+        <button class="filter-chip active" onclick="setFilter('age','todos',this)">Todas</button>
+        <button class="filter-chip" onclick="setFilter('age','30+',this)">30+</button>
+        <button class="filter-chip" onclick="setFilter('age','30-34',this)">30–34</button>
+        <button class="filter-chip" onclick="setFilter('age','35-39',this)">35–39</button>
+        <button class="filter-chip" onclick="setFilter('age','40-44',this)">40–44</button>
+        <button class="filter-chip" onclick="setFilter('age','45-49',this)">45–49</button>
+        <button class="filter-chip" onclick="setFilter('age','50-54',this)">50–54</button>
+        <button class="filter-chip" onclick="setFilter('age','55-59',this)">55–59</button>
+        <button class="filter-chip" onclick="setFilter('age','60+',this)">60+</button>
+      </div>
+      <div class="filter-sep"></div>
+      <input class="search-input" type="text" placeholder="Buscar atleta ou clube..." oninput="filterAthletes()">
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-val" id="st-total">0</div><div class="stat-lbl">Total filtrado</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-m">0</div><div class="stat-lbl">Masculino</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-f">0</div><div class="stat-lbl">Feminino</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-foz">0</div><div class="stat-lbl">AcquaMaster/FOZ</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-inscricoes">0</div><div class="stat-lbl">Inscrições</div></div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortBy('name')"># Nome ↕</th>
+            <th onclick="sortBy('year')">Nasc. ↕</th>
+            <th onclick="sortBy('age')">Idade ↕</th>
+            <th>Sexo</th>
+            <th onclick="sortBy('club')">Clube ↕</th>
+            <th>Provas inscritas</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty-state" id="empty" style="display:none">
+        <span>🏊</span>
+        Nenhum atleta encontrado com os filtros selecionados.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SEÇÃO BALIZAMENTO ===== -->
+  <div class="section" id="sec-balizamento">
+
+    <div class="bal-header-info">
+      <div class="bal-info-item"><span>Competição</span><strong>Meeting PR/SC Masters — 3ª Etapa</strong></div>
+      <div class="bal-info-item"><span>Troféu</span><strong>Ricardo Suzuki</strong></div>
+      <div class="bal-info-item"><span>Data</span><strong>20/06/2026</strong></div>
+      <div class="bal-info-item"><span>Local</span><strong>Country Clube de Maringá — Maringá/PR</strong></div>
+      <div class="bal-info-item"><span>Piscina</span><strong>25m · 7 raias</strong></div>
+    </div>
+
+    <div class="bal-stats" id="balStats"></div>
+
+    <div class="bal-filter-bar">
+      <input class="bal-search" type="text" id="balSearch" placeholder="Buscar atleta ou clube..." oninput="renderBalizamento()">
+      <button class="bal-toggle active" id="btnFozOnly" onclick="toggleFozOnly(this)">⭐ Só AcquaMaster/FOZ</button>
+      <select id="balProvaFilter" onchange="renderBalizamento()" style="background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.82rem;padding:6px 10px;outline:none;cursor:pointer;">
+        <option value="">Todas as provas</option>
+        <option value="1">1ª — 800m Livre F</option>
+        <option value="2">2ª — 400m Medley M</option>
+        <option value="3">3ª — 50m Costas F</option>
+        <option value="4">4ª — 50m Costas M</option>
+        <option value="5">5ª — 200m Livre F</option>
+        <option value="6">6ª — 200m Livre M</option>
+        <option value="7">7ª — 50m Borboleta F</option>
+        <option value="8">8ª — 50m Borboleta M</option>
+        <option value="9">9ª — 100m Peito F</option>
+        <option value="10">10ª — 100m Peito M</option>
+        <option value="11">11ª — 50m Livre F</option>
+        <option value="12">12ª — 50m Livre M</option>
+        <option value="13">13ª — 200m Costas F</option>
+        <option value="14">14ª — 200m Costas M</option>
+        <option value="15">15ª — 50m Peito F</option>
+        <option value="16">16ª — 50m Peito M</option>
+        <option value="17">17ª — 4x50m Medley F</option>
+        <option value="18">18ª — 4x50m Medley M</option>
+      </select>
+      <button class="bal-toggle active" id="btnCollapseAll" onclick="toggleAllProvas(this)">⊟ Recolher tudo</button>
+    </div>
+
+    <div id="balContainer"></div>
+  </div>
+
+  <!-- ===== SEÇÃO EVOLUÇÃO ===== -->
+  <div class="section" id="sec-evolucao">
+    <div class="chart-header">
+      <div class="chart-title">
+        <h2>Felipe Theodoro Guimarães</h2>
+        <p>Matrícula ABMN 129122 · Faixa 30+ · AcquaMaster/FOZ</p>
+      </div>
+      <div class="prova-tabs" id="provaTabs"></div>
+    </div>
+    <div class="chart-metrics" id="chartMetrics"></div>
+    <div class="chart-card">
+      <div class="legend-row" id="chartLegend"></div>
+      <div class="chart-canvas-wrap">
+        <canvas id="evoChart" role="img" aria-label="Gráfico de evolução de tempos por prova"></canvas>
+      </div>
+      <div class="chart-note" id="chartNote"></div>
+    </div>
+  </div>
+
+  <!-- ===== SEÇÃO IMPORTAR ===== -->
+  <div class="section" id="sec-importar">
+
+    <div class="import-grid">
+
+      <!-- Card: Upload -->
+      <div class="import-card">
+        <h3>📂 Upload do Excel</h3>
+        <p>Faça upload da planilha de inscritos. O arquivo deve ter as colunas de <strong>Nome</strong>, <strong>Ano de nascimento</strong>, <strong>Sexo</strong> e <strong>Clube</strong>.</p>
+
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFile(this.files[0])">
+          <span class="dz-icon">📄</span>
+          <div class="dz-text">Arraste o arquivo aqui ou clique para selecionar</div>
+          <div class="dz-sub">.xlsx · .xls · .csv</div>
+        </div>
+
+        <div class="progress-bar-wrap" id="progressWrap">
+          <div class="progress-bar" id="progressBar" style="width:0%"></div>
+        </div>
+
+        <div id="fileAlert"></div>
+      </div>
+
+      <!-- Card: Modelo -->
+      <div class="import-card">
+        <h3>📋 Formato esperado</h3>
+        <p>A planilha pode ter qualquer nome de arquivo. Você mapeará as colunas depois do upload. O formato ideal das colunas:</p>
+        <div class="template-cols">
+          <span class="template-col">Nome</span>
+          <span class="template-col">Ano</span>
+          <span class="template-col">Sexo</span>
+          <span class="template-col">Clube</span>
+        </div>
+        <p style="margin-top:1rem;">Valores aceitos para <strong>Sexo</strong>: <code style="color:var(--cyan)">M</code> ou <code style="color:var(--cyan)">F</code>.<br>
+        <strong>Ano</strong>: apenas o ano de nascimento (ex: 1990).</p>
+        <br>
+        <button class="btn-secondary" onclick="downloadTemplate()">⬇ Baixar planilha modelo</button>
+      </div>
+    </div>
+
+    <!-- Mapeamento de colunas -->
+    <div class="import-card" id="colMapCard" style="display:none; margin-bottom:1.5rem;">
+      <h3>🗂 Mapear colunas</h3>
+      <p style="margin-bottom:1rem;">Selecione qual coluna da sua planilha corresponde a cada campo:</p>
+      <div class="col-map" id="colMapGrid"></div>
+      <div style="display:flex; gap:10px; margin-top:1rem; flex-wrap:wrap;">
+        <button class="btn-primary" id="btnPreview" onclick="runPreview()">👁 Pré-visualizar</button>
+        <button class="btn-secondary" onclick="resetImport()">✕ Cancelar</button>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="import-card" id="previewCard" style="display:none;">
+      <div class="preview-header">
+        <h3>✅ Pré-visualização</h3>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;" id="previewStats"></div>
+      </div>
+      <div class="import-log" id="importLog"></div>
+      <div style="display:flex; gap:10px; margin-top:1.2rem; flex-wrap:wrap;">
+        <button class="btn-primary" id="btnApply" onclick="applyImport()">⬆ Aplicar e atualizar painel</button>
+        <button class="btn-danger" onclick="resetImport()">✕ Descartar</button>
+      </div>
+    </div>
+
+  </div><!-- /sec-importar -->
+</div>
+
+<script>
+// ==================== DATA BASE ====================
+const ANO_REF = new Date().getFullYear();
+document.getElementById('hdr-year').textContent = ANO_REF;
+document.getElementById('hdr-season').textContent = ANO_REF;
+
+const DEFAULT_ATHLETES = [
+  // ACQUAMASTER/FOZ (17 atletas)
+  { name:'ADRIANE DEQUI PALMA', year:1977, sex:'F', club:'ACQUAMASTER/FOZ', provas:[3,15] },
+  { name:'ANILDA KUNSLER SCHMITZ', year:1956, sex:'F', club:'ACQUAMASTER/FOZ', provas:[1,13] },
+  { name:'CARLO FABIANO TANNOURI', year:1975, sex:'M', club:'ACQUAMASTER/FOZ', provas:[4,14] },
+  { name:'FABIO FRANZONI', year:1972, sex:'M', club:'ACQUAMASTER/FOZ', provas:[2,14] },
+  { name:'FELIPE THEODORO GUIMARAES', year:1994, sex:'M', club:'ACQUAMASTER/FOZ', provas:[10,16] },
+  { name:'GILSON SERGIO MARTINS', year:1968, sex:'M', club:'ACQUAMASTER/FOZ', provas:[2,16] },
+  { name:'GLADIS PASA', year:1972, sex:'F', club:'ACQUAMASTER/FOZ', provas:[1,9] },
+  { name:'GUSTAVO RUBEN TOMADON VEGA', year:2005, sex:'M', club:'ACQUAMASTER/FOZ', provas:[4,12] },
+  { name:'JOAO RAFAEL RONSONI', year:1990, sex:'M', club:'ACQUAMASTER/FOZ', provas:[12,16] },
+  { name:'LAÍS KELLY SILVA RODRIGUES', year:1986, sex:'F', club:'ACQUAMASTER/FOZ', provas:[1,9] },
+  { name:'LELIO BRAGA DOS SANTOS', year:1958, sex:'M', club:'ACQUAMASTER/FOZ', provas:[6,14] },
+  { name:'LÍVIA VANZELI DE MARIA', year:1995, sex:'F', club:'ACQUAMASTER/FOZ', provas:[1,5] },
+  { name:'MARCIA CRISTINA VETTORELLO GENIAKE', year:1968, sex:'F', club:'ACQUAMASTER/FOZ', provas:[1,11] },
+  { name:'OSMAR AMARAL ARAUJO', year:1967, sex:'M', club:'ACQUAMASTER/FOZ', provas:[4,14] },
+  { name:'RODRIGO GOUVEIA DE OLIVEIRA NOBRE', year:1976, sex:'M', club:'ACQUAMASTER/FOZ', provas:[8,12] },
+  { name:'SHIRLEY CHOW SUEN KIU', year:1959, sex:'F', club:'ACQUAMASTER/FOZ', provas:[7,15] },
+  { name:'TEOTONIO JOSÉ DE SOUZA JUNIOR', year:1992, sex:'M', club:'ACQUAMASTER/FOZ', provas:[2,6] },
+  // ACADEMIA GUSTAVO BORGES
+  { name:'RAFAEL LOURENÇO LEMOS', year:1981, sex:'M', club:'ACADEMIA GUSTAVO BORGES', provas:[4,10] },
+  { name:'ROBERTO COSTA', year:1955, sex:'M', club:'ACADEMIA GUSTAVO BORGES', provas:[6,10] },
+  // ACADEMIA MOBI DICK
+  { name:'GUSTAVO SALOMAO CAMBI', year:1971, sex:'M', club:'ACADEMIA MOBI DICK', provas:[2,14] },
+  { name:'LUIS FABRICIANO MACHADO', year:1946, sex:'M', club:'ACADEMIA MOBI DICK', provas:[2,14] },
+  // ACADEMIA STUDIO CORPO LIVRE
+  { name:'DEBORAH SABBÁ GALVÃO', year:1974, sex:'F', club:'ACADEMIA STUDIO CORPO LIVRE', provas:[5,15] },
+  // ACQUANADE
+  { name:'DIVA CATANEO FUGANTI', year:1961, sex:'F', club:'ACQUANADE', provas:[5,9] },
+  { name:'NORMA NOGUEIRA DE MOURA', year:1962, sex:'F', club:'ACQUANADE', provas:[1] },
+  // AMARACQUA
+  { name:'ALLANA POLONI LACERDA SERRAGIOLI', year:2005, sex:'F', club:'AMARACQUA', provas:[1,15] },
+  { name:'BRUNA DO AMARAL', year:1989, sex:'F', club:'AMARACQUA', provas:[3,15] },
+  { name:'CAMILA BUENO MARIANO DINIZ DOS SANTOS', year:1986, sex:'F', club:'AMARACQUA', provas:[11,15] },
+  { name:'EDUARDO DINIZ', year:2006, sex:'M', club:'AMARACQUA', provas:[10,16] },
+  { name:'FERNANDA SILVA BEATRIZ', year:1998, sex:'F', club:'AMARACQUA', provas:[3,5] },
+  { name:'HAYANE CAROLINE CARDOZO DE LARA', year:2005, sex:'F', club:'AMARACQUA', provas:[1,11] },
+  { name:'JEFERSON MARTINS', year:1997, sex:'M', club:'AMARACQUA', provas:[10,16] },
+  { name:'KELLEN JESUS DE OLIVEIRA', year:1983, sex:'F', club:'AMARACQUA', provas:[5,11] },
+  { name:'LEONARDO SIQUEIRA', year:1991, sex:'M', club:'AMARACQUA', provas:[2,10] },
+  { name:'LUCAS GRZYGORCZYK', year:1994, sex:'M', club:'AMARACQUA', provas:[6,14] },
+  { name:'NATHALYE RAYANA MEDEIROS ANTUNES', year:2003, sex:'F', club:'AMARACQUA', provas:[5,13] },
+  { name:'STELLA GUALDEZ', year:1995, sex:'F', club:'AMARACQUA', provas:[3,11] },
+  { name:'THAYNA COMIN', year:2004, sex:'F', club:'AMARACQUA', provas:[3,9] },
+  { name:'VERA LÚCIA AUER', year:1957, sex:'F', club:'AMARACQUA', provas:[3,11] },
+  // AMARAL MASTERS
+  { name:'CELIO CARNEIRO DO AMARAL', year:1949, sex:'M', club:'AMARAL MASTERS', provas:[6,10] },
+  { name:'CESAR RICARDO FEUSTEL', year:1961, sex:'M', club:'AMARAL MASTERS', provas:[2,14] },
+  { name:'IVAN GOUVEA DO CARMO', year:1959, sex:'M', club:'AMARAL MASTERS', provas:[4,12] },
+  { name:'MARCELO GECHELE CLETO', year:1962, sex:'M', club:'AMARAL MASTERS', provas:[8,12] },
+  { name:'MARIO SERGIO SPOLADORE FILHO', year:1969, sex:'M', club:'AMARAL MASTERS', provas:[10,16] },
+  { name:'NADIR BARANHUK ARNS', year:1947, sex:'F', club:'AMARAL MASTERS', provas:[9,15] },
+  { name:'PEDRO NAZARENO DA SILVA', year:1956, sex:'M', club:'AMARAL MASTERS', provas:[6,8] },
+  { name:'ZEILA SILVA', year:1951, sex:'F', club:'AMARAL MASTERS', provas:[3,13] },
+  // APCEF PR
+  { name:'ELISIANE MARA BRITO', year:1968, sex:'F', club:'APCEF PR', provas:[7,15] },
+  { name:'HILDA EURIKO NAKASHIMA', year:1955, sex:'F', club:'APCEF PR', provas:[7,11] },
+  { name:'JANAINA MENEGHETTI', year:1981, sex:'F', club:'APCEF PR', provas:[3,7] },
+  { name:'MARIANA DE CASTRO SILVA', year:1983, sex:'F', club:'APCEF PR', provas:[11,15] },
+  { name:'PENELOPE ADRIANE LIEBL', year:1982, sex:'F', club:'APCEF PR', provas:[3,11] },
+  { name:'ROSEMARI RODRIGUES', year:1960, sex:'F', club:'APCEF PR', provas:[7,11] },
+  { name:'TEREZA HARUE FUGIVALA', year:1964, sex:'F', club:'APCEF PR', provas:[11,15] },
+  { name:'TIAGO JUNIOR DOS SANTOS', year:1988, sex:'M', club:'APCEF PR', provas:[8,12] },
+  // APAN MARINGÁ-PR
+  { name:'ALEXANDRE KEITI INOUE', year:1986, sex:'M', club:'APAN MARINGÁ-PR', provas:[8,12] },
+  { name:'ARNALDO DEHE NETO', year:1959, sex:'M', club:'APAN MARINGÁ-PR', provas:[8,16] },
+  { name:'BRUNO BITTAR MONTEIRO DE OLIVEIRA', year:2001, sex:'M', club:'APAN MARINGÁ-PR', provas:[8,12] },
+  { name:'BRUNO FERRARI SILVA', year:1988, sex:'M', club:'APAN MARINGÁ-PR', provas:[12,16] },
+  { name:'ELIZANGELA APARECIDA SILVA', year:1978, sex:'F', club:'APAN MARINGÁ-PR', provas:[1,11] },
+  { name:'JOÃO GUILHERME FIORI ORTEGA', year:1999, sex:'M', club:'APAN MARINGÁ-PR', provas:[6,14] },
+  { name:'JULIANO NARDON NIELSEN', year:1981, sex:'M', club:'APAN MARINGÁ-PR', provas:[6,16] },
+  { name:'JÚLIO NOBUYUKI ITO', year:2000, sex:'M', club:'APAN MARINGÁ-PR', provas:[6,8] },
+  { name:'LUIZA NISHI PIGATTO', year:1995, sex:'F', club:'APAN MARINGÁ-PR', provas:[11] },
+  { name:'MARCELO MONTEIRO DE OLIVEIRA', year:1962, sex:'M', club:'APAN MARINGÁ-PR', provas:[4,12] },
+  { name:'MARCIO FACCI JUNIOR', year:1990, sex:'M', club:'APAN MARINGÁ-PR', provas:[8,14] },
+  { name:'MARCOS ALESSANDRO CARNEIRO', year:1974, sex:'M', club:'APAN MARINGÁ-PR', provas:[8,16] },
+  { name:'MARIA APARECIDA SERT', year:1959, sex:'F', club:'APAN MARINGÁ-PR', provas:[13,15] },
+  { name:'RENAN DA SILVA TRINTIN', year:1990, sex:'M', club:'APAN MARINGÁ-PR', provas:[8,14] },
+  { name:'RITIELER GAMA CORREA', year:1980, sex:'M', club:'APAN MARINGÁ-PR', provas:[8,14] },
+  { name:'ROBERTO CASAGRANDE FILHO', year:1951, sex:'M', club:'APAN MARINGÁ-PR', provas:[6,14] },
+  { name:'SHEILA TAVARES NASCIMENTO', year:1984, sex:'F', club:'APAN MARINGÁ-PR', provas:[3,7] },
+  { name:'THIAGO FANELLI FERRAIOL', year:1984, sex:'M', club:'APAN MARINGÁ-PR', provas:[12,16] },
+  { name:'WALTER LOPES DE LIMA', year:1984, sex:'M', club:'APAN MARINGÁ-PR', provas:[4,10] },
+  // APAN PONTA GROSSA
+  { name:'LUCIO PEREIRA DE OLIVEIRA', year:1975, sex:'M', club:'APAN PONTA GROSSA', provas:[6,12] },
+  { name:'VERONICA ANDRADE BALSANO', year:1987, sex:'F', club:'APAN PONTA GROSSA', provas:[3,13] },
+  // AEAPR
+  { name:'PLANTINA DIAS FERNANDES', year:1957, sex:'F', club:'AEAPR', provas:[11,15] },
+  // CATARATAS NATAÇÃO
+  { name:'AUGUSTO CESAR THOMAZ', year:1948, sex:'M', club:'CATARATAS NATAÇÃO', provas:[4,12] },
+  { name:'IDELBRANDO LEITE DE LIMA', year:1942, sex:'M', club:'CATARATAS NATAÇÃO', provas:[6,10] },
+  { name:'OMAR GIDEONE PINHEIRO', year:1981, sex:'M', club:'CATARATAS NATAÇÃO', provas:[6,10] },
+  // C.C MARINGÁ
+  { name:'ACAUÃ ZAMBERLAN', year:1999, sex:'M', club:'C.C MARINGÁ', provas:[12] },
+  { name:'CARLOS ALBERTO FERNANDES DA SILVA', year:1957, sex:'M', club:'C.C MARINGÁ', provas:[8,16] },
+  { name:'FARIDA YATIYO OKUHARA', year:1969, sex:'F', club:'C.C MARINGÁ', provas:[3,5] },
+  { name:'FATIMA ELAINE ROMAO IWATA', year:1965, sex:'F', club:'C.C MARINGÁ', provas:[3,11] },
+  { name:'GLAUCO ALVES DA SILVA', year:1964, sex:'M', club:'C.C MARINGÁ', provas:[4,14] },
+  { name:'LUIZ FLAVIO MONTEIRO PORTO', year:1951, sex:'M', club:'C.C MARINGÁ', provas:[4,12] },
+  { name:'SILVIO ROMAO IWATA', year:1988, sex:'M', club:'C.C MARINGÁ', provas:[2,12] },
+  { name:'SILVIO SAITI IWATA', year:1959, sex:'M', club:'C.C MARINGÁ', provas:[6,8] },
+  { name:'VANESSA AGOSTINHO FERRAZ', year:1985, sex:'F', club:'C.C MARINGÁ', provas:[15] },
+  { name:'WALCIR FRANZONI', year:1968, sex:'M', club:'C.C MARINGÁ', provas:[6,12] },
+  // C. M. PARANÁ
+  { name:'LUIS PAULO GOMES MASCARENHAS', year:1971, sex:'M', club:'C. M. PARANÁ', provas:[12,14] },
+  { name:'LYS ROSITA BOEIRA LOCATELLI', year:1955, sex:'F', club:'C. M. PARANÁ', provas:[3,13] },
+  // CURITIBANO
+  { name:'FELIPE DE A C LUIZ', year:1980, sex:'M', club:'CURITIBANO', provas:[8,12] },
+  { name:'FRANCISCO FRUET', year:1953, sex:'M', club:'CURITIBANO', provas:[4,10] },
+  // DKM SPORTS
+  { name:'CARLA HORST VAINE', year:1981, sex:'F', club:'DKM SPORTS', provas:[7,13] },
+  { name:'CESAR HIDEKI INADA', year:1963, sex:'M', club:'DKM SPORTS', provas:[4,14] },
+  { name:'EDUARDO MARAFON', year:1982, sex:'M', club:'DKM SPORTS', provas:[4,12] },
+  { name:'FLAVIO HENRIQUE DA ROSA UREN', year:1959, sex:'M', club:'DKM SPORTS', provas:[8,16] },
+  { name:'GUILHERME KERNISKI DEMANTOVA', year:1982, sex:'M', club:'DKM SPORTS', provas:[2,10] },
+  { name:'JAMES ROBERTO ZOSCHKE', year:1976, sex:'M', club:'DKM SPORTS', provas:[2,16] },
+  { name:'JUNIOR CUSTÓDIO ZAMPAR', year:1983, sex:'M', club:'DKM SPORTS', provas:[8,16] },
+  { name:'LEONARDO FALEIROS TEIXEIRA', year:1986, sex:'M', club:'DKM SPORTS', provas:[16] },
+  { name:'LIANA YURI FUKUDA', year:1967, sex:'F', club:'DKM SPORTS', provas:[7,13] },
+  { name:'LIGIA MARIA FACCI DE CARVALHO', year:1977, sex:'F', club:'DKM SPORTS', provas:[5,15] },
+  { name:'MARCELO GONÇALVES BOSKOVITZ', year:1962, sex:'M', club:'DKM SPORTS', provas:[12,16] },
+  { name:'MIRIAM RANGEL', year:1956, sex:'F', club:'DKM SPORTS', provas:[11,15] },
+  { name:'RAQUEL BARROSO SAMPAIO', year:1960, sex:'F', club:'DKM SPORTS', provas:[9,15] },
+  { name:'ROSELI FERNANDES ALVES SILVA', year:1961, sex:'F', club:'DKM SPORTS', provas:[1,5] },
+  { name:'SILVANA SCHIMITI YAMACITA', year:1961, sex:'F', club:'DKM SPORTS', provas:[11,13] },
+  { name:'ZILDA BENKENDORF MAIOCHI', year:1953, sex:'F', club:'DKM SPORTS', provas:[9,13] },
+  // FÁBRICA DE NADADORES
+  { name:'ANDRÉ MORADOR FRANÇA PAULINO', year:1989, sex:'M', club:'FÁBRICA DE NADADORES', provas:[8,16] },
+  { name:'BRUNO HENRIQUE PACAGNAN', year:1991, sex:'M', club:'FÁBRICA DE NADADORES', provas:[8,14] },
+  { name:'EDUARDO AUGUSTO TOMANIK', year:1954, sex:'M', club:'FÁBRICA DE NADADORES', provas:[8,16] },
+  { name:'FABIO CARNEIRO BARBOSA', year:1970, sex:'M', club:'FÁBRICA DE NADADORES', provas:[8,12] },
+  { name:'FLÁVIA DOS REIS PENTEADO SUZUKI', year:1988, sex:'F', club:'FÁBRICA DE NADADORES', provas:[1,11] },
+  { name:'HELIO JOSE NERY', year:1964, sex:'M', club:'FÁBRICA DE NADADORES', provas:[12] },
+  { name:'HUGO ZENI NETO', year:1982, sex:'M', club:'FÁBRICA DE NADADORES', provas:[10,16] },
+  { name:'JHONATAN HENRIQUE DELFINO MACHADO', year:1991, sex:'M', club:'FÁBRICA DE NADADORES', provas:[6,14] },
+  { name:'JOSE LUIS SORIANI FILHO', year:1983, sex:'M', club:'FÁBRICA DE NADADORES', provas:[10,16] },
+  { name:'LAURI CESAR BITTENCOURT', year:1952, sex:'M', club:'FÁBRICA DE NADADORES', provas:[4,8] },
+  { name:'MAURICIO ISTAKE', year:1979, sex:'M', club:'FÁBRICA DE NADADORES', provas:[10,14] },
+  { name:'PAULO EDUARDO FENTI', year:1975, sex:'M', club:'FÁBRICA DE NADADORES', provas:[6,14] },
+  { name:'PEDRO HENRIQUE ROSSETTO', year:2002, sex:'M', club:'FÁBRICA DE NADADORES', provas:[8,12] },
+  { name:'RAFAEL DE FRANÇA PEREIRA', year:2001, sex:'M', club:'FÁBRICA DE NADADORES', provas:[10,16] },
+  { name:'RENATA MERCURIO MACEDO DA SILVA', year:1981, sex:'F', club:'FÁBRICA DE NADADORES', provas:[7,11] },
+  { name:'RICARDO GOBETTI SUZUKI', year:1986, sex:'M', club:'FÁBRICA DE NADADORES', provas:[2,10] },
+  { name:'ROGERIO IMAI', year:1978, sex:'M', club:'FÁBRICA DE NADADORES', provas:[8,12] },
+  // FECAM
+  { name:'LUIS FELIPE DAMHA', year:1987, sex:'M', club:'FECAM', provas:[6,14] },
+  { name:'PAULA GEHRING', year:1977, sex:'F', club:'FECAM', provas:[5,11] },
+  // HARMONIA CLUBE DE CAMPO
+  { name:'FERNANDO GUSTAVO RODRIGUES BRISOLA', year:1990, sex:'M', club:'HARMONIA CLUBE DE CAMPO', provas:[4,8] },
+  { name:'RENATO MARTINS SIMOES', year:1975, sex:'M', club:'HARMONIA CLUBE DE CAMPO', provas:[2,10] },
+  // LIRA T.C.
+  { name:'IRAN CARLOS STALLIVIERE CORRÊA', year:1950, sex:'M', club:'LIRA T.C.', provas:[6,14] },
+  { name:'TEREZA MARIA RODRIGUES TURINI', year:1966, sex:'F', club:'LIRA T.C.', provas:[9] },
+  // LONDRINA CC
+  { name:'LUCIANO GARDANO ELIAS BUCHARLES', year:1970, sex:'M', club:'LONDRINA CC', provas:[4,12] },
+  // LS SWIM TEAM
+  { name:'CLAUDIA PEREIRA DE CARVALHO', year:1975, sex:'F', club:'LS SWIM TEAM', provas:[1,5] },
+  { name:'CRISTINA GUIMARAES SAMPAIO', year:1957, sex:'F', club:'LS SWIM TEAM', provas:[3,11] },
+  // MASTER ACQUAFLY
+  { name:'ANA CAROLINA FIGUEIREDO FELIX', year:2000, sex:'F', club:'MASTER ACQUAFLY', provas:[7,15] },
+  { name:'ANÉSIO AUGUSTO FAVERO', year:1995, sex:'M', club:'MASTER ACQUAFLY', provas:[6,8] },
+  { name:'GABRIEL JONATHAN SOUSA ANDRADE', year:1994, sex:'M', club:'MASTER ACQUAFLY', provas:[8,12] },
+  { name:'LAWRENCE MAYER MALANSKI', year:1986, sex:'M', club:'MASTER ACQUAFLY', provas:[6,10] },
+  { name:'LESSANDRA NIEHUES MAIKUMA', year:1982, sex:'F', club:'MASTER ACQUAFLY', provas:[7,9] },
+  { name:'WALLACE PAZETO DA SILVA REIS', year:1988, sex:'M', club:'MASTER ACQUAFLY', provas:[4,6] },
+  // ML TEAM
+  { name:'JULIA TOSIKO ITIMURA', year:1933, sex:'F', club:'ML TEAM', provas:[3,11] },
+  { name:'NILO JOJI MORISHITA', year:1963, sex:'M', club:'ML TEAM', provas:[2,6] },
+  { name:'RICARDO ALENCAR DE ASSIS', year:1976, sex:'M', club:'ML TEAM', provas:[6,12] },
+  // 5º NADO
+  { name:'FÁBIO KOKI KITAHARA', year:1980, sex:'M', club:'5º NADO', provas:[10,16] },
+  { name:'JULIANA HIDEMI NONOSE KITAHARA', year:1982, sex:'F', club:'5º NADO', provas:[1,5] },
+  { name:'LUANA DE FATIMA SANCHES MUSSI', year:1981, sex:'F', club:'5º NADO', provas:[11,15] },
+  { name:'RODRIGO LUIS MUSSI', year:1982, sex:'M', club:'5º NADO', provas:[8,12] },
+  // SANTA MONICA
+  { name:'ALESSANDRA BONACIN BUTKIEWICZ', year:1977, sex:'F', club:'SANTA MONICA', provas:[1,11] },
+  { name:'ANA THEREZA QUADROS MAES', year:2002, sex:'F', club:'SANTA MONICA', provas:[5,13] },
+  { name:'FABIO IEGER', year:1982, sex:'M', club:'SANTA MONICA', provas:[4,12] },
+  { name:'FABIO RICARDO MARQUES', year:1977, sex:'M', club:'SANTA MONICA', provas:[6,14] },
+  { name:'FELIPE DE DEUS', year:1993, sex:'M', club:'SANTA MONICA', provas:[10,16] },
+  { name:'GISLAINE HRYCYK PINHEIRO', year:1981, sex:'F', club:'SANTA MONICA', provas:[3,11] },
+  { name:'JACQUELINE MAGNO GOIS SANTOS', year:1987, sex:'F', club:'SANTA MONICA', provas:[11,15] },
+  { name:'LUCAS RODRIGUES MACHADO', year:1988, sex:'M', club:'SANTA MONICA', provas:[4,12] },
+  { name:'THAYANE MENDES VIERO', year:1985, sex:'F', club:'SANTA MONICA', provas:[7,15] },
+  // TOLEDO
+  { name:'ALMIR ROGERIO DENIG BANDEIRA', year:1971, sex:'M', club:'TOLEDO', provas:[6,14] },
+  { name:'AYRTON JOSÉ JUNGLES PACHECO JUNIOR', year:1984, sex:'M', club:'TOLEDO', provas:[4,12] },
+  { name:'CARLOS SUMI', year:1960, sex:'M', club:'TOLEDO', provas:[6,16] },
+  { name:'CLAU MOMESSO', year:1985, sex:'F', club:'TOLEDO', provas:[5,13] },
+  { name:'ELAINE SEFRIAN PEINADO', year:1987, sex:'F', club:'TOLEDO', provas:[3,11] },
+  { name:'ELIANA KIND', year:1964, sex:'F', club:'TOLEDO', provas:[9,13] },
+  { name:'EVELIN ELOISA IGNACIO', year:1997, sex:'F', club:'TOLEDO', provas:[1,13] },
+  { name:'FABIANO GALANTE', year:1974, sex:'M', club:'TOLEDO', provas:[6,10] },
+  { name:'FERNANDO ANDREOLA ZARDO', year:1989, sex:'M', club:'TOLEDO', provas:[4,12] },
+  { name:'FERNANDO ESPINOZA', year:1962, sex:'M', club:'TOLEDO', provas:[12,16] },
+  { name:'FERNANDO MOSCONI', year:1988, sex:'M', club:'TOLEDO', provas:[6,12] },
+  { name:'FLAVIO AUGUSTO RABELLO MENEZES DE ALMEIDA', year:1985, sex:'M', club:'TOLEDO', provas:[4,8] },
+  { name:'FRIEDRICH WOLFRAM SCHILLER', year:1964, sex:'M', club:'TOLEDO', provas:[6,14] },
+  { name:'GESLIANI BIAGGI', year:1982, sex:'F', club:'TOLEDO', provas:[9,11] },
+  { name:'GIANE OLIVEIRA DA ROSA', year:1969, sex:'F', club:'TOLEDO', provas:[1,5] },
+  { name:'HEBER SANDER ZULIAN', year:1982, sex:'M', club:'TOLEDO', provas:[10,14] },
+  { name:'JEFERSON RIBEIRO DE SOUZA', year:1998, sex:'M', club:'TOLEDO', provas:[2,10] },
+  { name:'JOAO PEDRO MEURER DIAS', year:2004, sex:'M', club:'TOLEDO', provas:[2,8] },
+  { name:'JOSÉ ANIZIO MACHADO', year:1970, sex:'M', club:'TOLEDO', provas:[6,14] },
+  { name:'JOSÉ ROBERTO FRANZ', year:1981, sex:'M', club:'TOLEDO', provas:[6,10] },
+  { name:'JOSELIA LARGER MANFIO', year:1975, sex:'F', club:'TOLEDO', provas:[1,5] },
+  { name:'LAURA LUIZA BAZI', year:1999, sex:'F', club:'TOLEDO', provas:[9,15] },
+  { name:'LUCAS GABRIEL MEDEIROS DA SILVA', year:1997, sex:'M', club:'TOLEDO', provas:[6,8] },
+  { name:'MANOEL JOAQUIM DE OLIVEIRA', year:1955, sex:'M', club:'TOLEDO', provas:[6,14] },
+  { name:'MARISTELA CAVICCHIOLI MAKRAKIS', year:1969, sex:'F', club:'TOLEDO', provas:[3,13] },
+  { name:'NELSON A SANDER', year:1959, sex:'M', club:'TOLEDO', provas:[2,12] },
+  { name:'NILTON DA HORA FIGUEIREDO', year:1972, sex:'M', club:'TOLEDO', provas:[4,10] },
+  { name:'ROBERTO SIMEAO RONCATO', year:1966, sex:'M', club:'TOLEDO', provas:[4,16] },
+  { name:'SERGIO MAKRAKIS', year:1961, sex:'M', club:'TOLEDO', provas:[4,10] },
+  { name:'VINÍCIUS DOS REIS VIEIRA', year:1998, sex:'M', club:'TOLEDO', provas:[6,16] },
+  { name:'WILYAM TETSUO GONDO', year:1989, sex:'M', club:'TOLEDO', provas:[2,16] },
+  // UTFPR
+  { name:'PAULO R PALLU', year:1968, sex:'M', club:'UTFPR', provas:[10,14] },
+  // USSR/UNICAMP
+  { name:'MIRIAN AYUMI KURAUTI', year:1991, sex:'F', club:'USSR/UNICAMP', provas:[7,15] },
+  // WINNERS
+  { name:'RUDÁ RYUITI FURUKITA BAPTISTA', year:1988, sex:'M', club:'WINNERS', provas:[8,16] },
+];
+
+const DATA_VERSION = '2026-06-11-v3'; // atualizar aqui a cada nova lista importada
+
+// Carrega do localStorage se houver E versão for igual, senão usa default
+let athletes = loadAthletes();
+
+function loadAthletes() {
+  try {
+    const savedVersion = localStorage.getItem('acquamaster_version');
+    const saved = localStorage.getItem('acquamaster_athletes');
+    if (saved && savedVersion === DATA_VERSION) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed.map(a => ({...a, age: ANO_REF - a.year}));
+    }
+  } catch(e) {}
+  // versão diferente ou sem dado: usa o default e salva versão atual
+  localStorage.setItem('acquamaster_version', DATA_VERSION);
+  localStorage.removeItem('acquamaster_athletes');
+  return DEFAULT_ATHLETES.map(a => ({...a, age: ANO_REF - a.year}));
+}
+
+function saveAthletes(list) {
+  try {
+    localStorage.setItem('acquamaster_athletes', JSON.stringify(list.map(({age,...a}) => a)));
+    localStorage.setItem('acquamaster_version', DATA_VERSION);
+  } catch(e) {}
+}
+
+// ==================== FILTERS ====================
+let filters = { sex:'todos', age:'todos' };
+let sortCol = 'name', sortDir = 1;
+
+function setFilter(type, val, btn) {
+  filters[type] = val;
+  btn.closest('.filter-group').querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterAthletes();
+}
+
+function matchAge(age) {
+  if (filters.age === 'todos') return true;
+  if (filters.age === '30+') return age >= 30;
+  if (filters.age === '30-34') return age >= 30 && age <= 34;
+  if (filters.age === '35-39') return age >= 35 && age <= 39;
+  if (filters.age === '40-44') return age >= 40 && age <= 44;
+  if (filters.age === '45-49') return age >= 45 && age <= 49;
+  if (filters.age === '50-54') return age >= 50 && age <= 54;
+  if (filters.age === '55-59') return age >= 55 && age <= 59;
+  if (filters.age === '60+') return age >= 60;
+  return true;
+}
+
+function filterAthletes() {
+  const q = document.querySelector('.search-input').value.toLowerCase();
+  let list = athletes.filter(a => {
+    if (filters.sex !== 'todos' && a.sex !== filters.sex) return false;
+    if (!matchAge(a.age)) return false;
+    if (q && !a.name.toLowerCase().includes(q) && !a.club.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  list.sort((a,b) => {
+    let va = a[sortCol], vb = b[sortCol];
+    if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    return va < vb ? -sortDir : va > vb ? sortDir : 0;
+  });
+  renderTable(list);
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = 1; }
+  filterAthletes();
+}
+
+function renderTable(list) {
+  // deduplica por name+club (o array novo tem entradas únicas, mas por segurança)
+  const seen = new Set();
+  list = list.filter(a => {
+    const k = a.name + '|' + a.club;
+    if (seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+
+  const PROVA_LABELS = {
+    1:'800L F',2:'400M M',3:'50C F',4:'50C M',5:'200L F',6:'200L M',
+    7:'50B F',8:'50B M',9:'100P F',10:'100P M',11:'50L F',12:'50L M',
+    13:'200C F',14:'200C M',15:'50P F',16:'50P M',17:'4x50 Med F',18:'4x50 Med M'
+  };
+
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('empty');
+  document.getElementById('st-total').textContent = list.length;
+  document.getElementById('st-m').textContent = list.filter(a => a.sex === 'M').length;
+  document.getElementById('st-f').textContent = list.filter(a => a.sex === 'F').length;
+  document.getElementById('st-foz').textContent = list.filter(a => a.club === 'ACQUAMASTER/FOZ').length;
+  document.getElementById('st-inscricoes').textContent = list.reduce((n,a) => n + (a.provas||[]).length, 0);
+  if (!list.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = list.map((a,i) => {
+    const provasBadges = (a.provas||[]).map(p =>
+      `<span style="font-family:'DM Mono',monospace;font-size:0.65rem;padding:1px 5px;border-radius:3px;background:rgba(0,212,255,0.08);color:var(--cyan);border:1px solid rgba(0,212,255,0.2);white-space:nowrap;">${PROVA_LABELS[p]||p+'ª'}</span>`
+    ).join(' ');
+    return `
+    <tr>
+      <td class="name">${i+1}. ${toTitleCase(a.name)}</td>
+      <td class="year">${a.year}</td>
+      <td class="age">${a.age}</td>
+      <td><span style="font-size:0.75rem;color:${a.sex==='M'?'#00d4ff':'#f472b6'}">${a.sex}</span></td>
+      <td class="club"><span class="badge ${a.club==='ACQUAMASTER/FOZ'?'badge-foz':'badge-other'}">${a.club}</span></td>
+      <td style="font-size:0.78rem;">${provasBadges || '<span style="color:var(--muted);font-size:0.72rem;">—</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function toTitleCase(s) {
+  const lower = ['DE','DA','DO','DOS','DAS','E','A','O'];
+  return s.split(' ').map((w,i) => {
+    if (i > 0 && lower.includes(w)) return w.toLowerCase();
+    return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  }).join(' ');
+}
+
+// ==================== CHART ====================
+const provas = {
+  peito50:{ label:'50m Peito', metrics:{record:'41.61',evento:'1º · Londrina mai/26',melhora:'−4.0s vs mar/25'},
+    sets:[
+      {label:'25m',color:'#00d4ff',dash:[],pts:[{x:'06/2024',y:110.20},{x:'03/2025',y:42.60},{x:'06/2025',y:45.80},{x:'05/2026',y:41.61}]},
+      {label:'50m',color:'#10b981',dash:[5,4],pts:[{x:'08/2024',y:46.20},{x:'08/2025',y:44.06}]}
+    ], note:'Prova principal. Recorde pessoal de 41.61s em mai/2026 (1º lugar). Evolução consistente tanto no 25m quanto no 50m.'},
+  livre50:{ label:'50m Livre', metrics:{record:'38.34',evento:'8º · Curitiba mar/25',melhora:'−2.1s vs jun/24'},
+    sets:[
+      {label:'25m',color:'#00d4ff',dash:[],pts:[{x:'06/2024',y:40.41},{x:'03/2025',y:38.34}]},
+      {label:'50m',color:'#10b981',dash:[5,4],pts:[{x:'08/2024',y:39.89},{x:'08/2025',y:39.02}]}
+    ], note:'Record pessoal de 38.34 (25m, mar/2025). No 50m melhora gradual: 39.89 → 39.02. DQL em set/2025 não computada.'},
+  peito100:{ label:'100m Peito', metrics:{record:'1:45.07',evento:'2º · Curitiba ago/25',melhora:'−5.1s (50m)'},
+    sets:[
+      {label:'25m',color:'#00d4ff',dash:[],pts:[{x:'06/2024',y:110.20},{x:'06/2025',y:107.00},{x:'11/2025',y:110.65},{x:'05/2026',y:117.44}]},
+      {label:'50m',color:'#10b981',dash:[5,4],pts:[{x:'08/2025',y:105.07}]}
+    ], note:'Melhor 25m: 1:47.00 (jun/2025). Recorde no 50m: 1:45.07 (ago/2025). Prova com maior número de 2º lugares.'},
+  livre100:{ label:'100m Livre', metrics:{record:'1:29.69',evento:'5º · Floripa set/25',melhora:'−7.7s vs 2024'},
+    sets:[
+      {label:'25m',color:'#00d4ff',dash:[],pts:[{x:'09/2024',y:97.35},{x:'04/2025',y:106.71},{x:'09/2025',y:89.69}]},
+      {label:'50m',color:'#10b981',dash:[5,4],pts:[{x:'08/2024',y:97.33}]}
+    ], note:'Salto expressivo: 1:37 → 1:29 no 25m entre 2024 e set/2025. Maior melhora percentual registrada.'},
+  peito200:{ label:'200m Peito', metrics:{record:'3:54.37',evento:'2º · Londrina abr/25',melhora:'2 provas'},
+    sets:[{label:'25m',color:'#00d4ff',dash:[],pts:[{x:'04/2025',y:234.37},{x:'05/2026',y:237.44}]}],
+    note:'Disputada apenas 2x, ambas com 2º lugar e tempos bem próximos (~3:54/3:57). Consistência elevada.'}
+};
+
+let currentChart = null, activeProva = 'peito50';
+
+function buildProvaTabs() {
+  document.getElementById('provaTabs').innerHTML = Object.entries(provas).map(([k,v]) =>
+    `<button class="prova-tab ${k===activeProva?'active':''}" onclick="selectProva('${k}',this)">${v.label}</button>`).join('');
+}
+
+function selectProva(key, btn) {
+  activeProva = key;
+  document.querySelectorAll('.prova-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart(key);
+}
+
+function renderChart(key) {
+  const p = provas[key];
+  document.getElementById('chartMetrics').innerHTML = `
+    <div class="cmetric"><div class="cm-val">${p.metrics.record}</div><div class="cm-lbl">Recorde pessoal</div><div class="cm-sub">${p.metrics.evento}</div></div>
+    <div class="cmetric"><div class="cm-val" style="color:var(--green)">${p.metrics.melhora}</div><div class="cm-lbl">Evolução</div><div class="cm-sub">vs. primeira marca</div></div>
+    <div class="cmetric"><div class="cm-val">${p.sets.reduce((a,s)=>a+s.pts.length,0)}</div><div class="cm-lbl">Marcas registradas</div><div class="cm-sub">nas duas piscinas</div></div>`;
+  document.getElementById('chartLegend').innerHTML = p.sets.map(s =>
+    `<div class="legend-item"><div class="legend-dot" style="background:${s.color}; ${s.dash.length?'opacity:0.5':''}"></div>${s.label}</div>`).join('');
+  document.getElementById('chartNote').textContent = p.note;
+
+  const allLabels = [...new Set(p.sets.flatMap(s => s.pts.map(pt => pt.x)))].sort((a,b) => {
+    const [am,ay]=a.split('/'); const [bm,by]=b.split('/');
+    return (+ay*12 + +am) - (+by*12 + +bm);
+  });
+  const datasets = p.sets.map(s => ({
+    label:s.label, data:allLabels.map(l => { const pt=s.pts.find(p=>p.x===l); return pt?pt.y:null; }),
+    borderColor:s.color, backgroundColor:s.color+'18', borderDash:s.dash, borderWidth:2.5,
+    pointRadius:6, pointBackgroundColor:s.color, pointHoverRadius:8, tension:0.35, spanGaps:false
+  }));
+
+  if (currentChart) currentChart.destroy();
+  currentChart = new Chart(document.getElementById('evoChart'), {
+    type:'line', data:{ labels:allLabels, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{
+        backgroundColor:'#112040', borderColor:'rgba(0,212,255,0.3)', borderWidth:1,
+        titleColor:'#00d4ff', bodyColor:'#7a92b8',
+        callbacks:{ label: ctx => {
+          const v=ctx.raw; if(v===null) return '';
+          const m=Math.floor(v/60); const s=(v%60).toFixed(2);
+          return ` ${ctx.dataset.label}: ${m>0?m+':'+s.padStart(5,'0'):s+'s'}`;
+        }}
+      }},
+      scales:{
+        x:{ grid:{color:'rgba(0,212,255,0.06)'}, ticks:{color:'#7a92b8',font:{size:11,family:'DM Mono'}} },
+        y:{ reverse:true, grid:{color:'rgba(0,212,255,0.06)'}, ticks:{
+          color:'#7a92b8', font:{size:11,family:'DM Mono'},
+          callback: v => { const m=Math.floor(v/60); const s=(v%60).toFixed(0); return m>0?m+':'+String(s).padStart(2,'0'):s+'s'; }
+        }}
+      }
+    }
+  });
+}
+
+// ==================== BALIZAMENTO DATA ====================
+const EVENTO = {
+  nome: 'Meeting PR/SC Masters de Nat. 3ª Etapa — Troféu Ricardo Suzuki',
+  data: '20/06/2026', local: 'Country Clube de Maringá', piscina: '25m · 7 raias'
+};
+
+const PROVAS_BAL = [
+  { num:1, nome:'800 Metros Livre Feminino', horario:'13:00', termino:'13:51', series:[
+    { serie:1, horario:'13:00', atletas:[
+      {raia:1,matr:115558,faixa:'60+',nome:'NORMA NOGUEIRA DE MOURA',clube:'ACQUANADE',tempo:'19:57.84'},
+      {raia:2,matr:23951,faixa:'70+',nome:'ANILDA KUNSLER SCHMITZ',clube:'ACQUAMASTER/FOZ',tempo:'19:22.32'},
+      {raia:3,matr:7754,faixa:'55+',nome:'MARCIA CRISTINA VETTORELLO GENIAKE',clube:'ACQUAMASTER/FOZ',tempo:'17:31.32'},
+      {raia:4,matr:122678,faixa:'45+',nome:'ELIZANGELA APARECIDA SILVA',clube:'APAN MARINGÁ-PR',tempo:'17:04.48'},
+      {raia:5,matr:7958,faixa:'50+',nome:'GLADIS PASA',clube:'ACQUAMASTER/FOZ',tempo:'15:56.00'},
+      {raia:6,matr:132716,faixa:'55+',nome:'GIANE OLIVEIRA DA ROSA',clube:'TOLEDO',tempo:'S/T'},
+      {raia:7,matr:51447,faixa:'40+',nome:'LAÍS KELLY SILVA RODRIGUES',clube:'ACQUAMASTER/FOZ',tempo:'S/T'},
+    ]},
+    { serie:2, horario:'13:21', atletas:[
+      {raia:1,matr:131753,faixa:'30+',nome:'LÍVIA VANZELI DE MARIA',clube:'ACQUAMASTER/FOZ',tempo:'13:50.92'},
+      {raia:2,matr:106168,faixa:'50+',nome:'JOSELIA LARGER MANFIO',clube:'TOLEDO',tempo:'13:50.66'},
+      {raia:3,matr:122008,faixa:'25+',nome:'EVELIN ELOISA IGNACIO',clube:'TOLEDO',tempo:'14:40.10'},
+      {raia:4,matr:109307,faixa:'50+',nome:'CLAUDIA PEREIRA DE CARVALHO',clube:'LS SWIM TEAM',tempo:'14:00.00'},
+      {raia:5,matr:113827,faixa:'45+',nome:'ALESSANDRA BONACIN BUTKIEWICZ',clube:'SANTA MONICA',tempo:'14:19.82'},
+    ]},
+    { serie:3, horario:'13:37', atletas:[
+      {raia:1,matr:137014,faixa:'35+',nome:'FLÁVIA DOS REIS PENTEADO SUZUKI',clube:'FÁBRICA DE NADADORES',tempo:'13:10.00'},
+      {raia:3,matr:136615,faixa:'40+',nome:'JULIANA HIDEMI NONOSE KITAHARA',clube:'5º NADO',tempo:'12:00.00'},
+      {raia:4,matr:137082,faixa:'PRÉ',nome:'ALLANA POLONI LACERDA SERRAGIOLI',clube:'AMARACQUA',tempo:'9:19.00'},
+      {raia:5,matr:3065,faixa:'65+',nome:'ROSELI FERNANDES ALVES SILVA',clube:'DKM SPORTS',tempo:'11:05.25'},
+      {raia:6,matr:136798,faixa:'PRÉ',nome:'HAYANE CAROLINE CARDOZO DE LARA',clube:'AMARACQUA',tempo:'12:30.00'},
+    ]},
+  ]},
+  { num:2, nome:'400 Metros Medley Masculino', horario:'13:52', termino:'14:22', series:[
+    { serie:1, horario:'13:52', atletas:[
+      {raia:1,matr:3715,faixa:'80+',nome:'LUIS FABRICIANO MACHADO',clube:'MOBI DICK',tempo:'13:41.11'},
+      {raia:2,matr:105775,faixa:'55+',nome:'GUSTAVO SALOMAO CAMBI',clube:'MOBI DICK',tempo:'8:26.40'},
+      {raia:3,matr:105884,faixa:'65+',nome:'NELSON A SANDER',clube:'TOLEDO',tempo:'8:30.70'},
+      {raia:4,matr:5137,faixa:'60+',nome:'NILO JOJI MORISHITA',clube:'ML TEAM',tempo:'7:18.43'},
+      {raia:5,matr:105817,faixa:'50+',nome:'RENATO MARTINS SIMOES',clube:'HARMONIA CLUBE DE CAMPO',tempo:'7:19.38'},
+      {raia:6,matr:134649,faixa:'35+',nome:'WILYAM TETSUO GONDO',clube:'TOLEDO',tempo:'7:28.55'},
+      {raia:7,matr:105841,faixa:'50+',nome:'FABIO FRANZONI',clube:'ACQUAMASTER/FOZ',tempo:'7:28.74'},
+    ]},
+    { serie:2, horario:'14:07', atletas:[
+      {raia:2,matr:122235,faixa:'30+',nome:'TEOTONIO JOSÉ DE SOUZA JUNIOR',clube:'ACQUAMASTER/FOZ',tempo:'7:04.66'},
+      {raia:3,matr:25289,faixa:'55+',nome:'GILSON SERGIO MARTINS',clube:'ACQUAMASTER/FOZ',tempo:'6:59.64'},
+      {raia:4,matr:137088,faixa:'35+',nome:'LEONARDO SIQUEIRA',clube:'AMARACQUA',tempo:'6:32.00'},
+      {raia:5,matr:21837,faixa:'35+',nome:'SILVIO ROMAO IWATA',clube:'C.C MARINGÁ',tempo:'6:35.00'},
+      {raia:6,matr:682,faixa:'65+',nome:'CESAR RICARDO FEUSTEL',clube:'AMARAL MASTERS',tempo:'6:30.00'},
+    ]},
+    { serie:3, horario:'14:15', atletas:[
+      {raia:2,matr:131360,faixa:'PRÉ',nome:'JOAO PEDRO MEURER DIAS',clube:'TOLEDO',tempo:'6:00.90'},
+      {raia:3,matr:115263,faixa:'25+',nome:'JEFERSON RIBEIRO DE SOUZA',clube:'TOLEDO',tempo:'6:00.88'},
+      {raia:4,matr:110960,faixa:'50+',nome:'JAMES ROBERTO ZOSCHKE',clube:'DKM SPORTS',tempo:'5:40.00'},
+      {raia:5,matr:122565,faixa:'40+',nome:'GUILHERME KERNISKI DEMANTOVA',clube:'DKM SPORTS',tempo:'5:33.85'},
+      {raia:6,matr:109880,faixa:'40+',nome:'RICARDO GOBETTI SUZUKI',clube:'FÁBRICA DE NADADORES',tempo:'5:08.19'},
+    ]},
+  ]},
+  { num:3, nome:'50 Metros Costas Feminino', horario:'14:21', termino:'14:31', series:[
+    { serie:1, horario:'14:21', atletas:[
+      {raia:1,matr:3713,faixa:'90+',nome:'JULIA TOSIKO ITIMURA',clube:'ML TEAM',tempo:'2:02.46'},
+      {raia:2,matr:3521,faixa:'60+',nome:'FATIMA ELAINE ROMAO IWATA',clube:'C.C MARINGÁ',tempo:'59.00'},
+      {raia:3,matr:119968,faixa:'55+',nome:'MARISTELA CAVICCHIOLI MAKRAKIS',clube:'TOLEDO',tempo:'48.61'},
+      {raia:4,matr:5013,faixa:'70+',nome:'LYS ROSITA BOEIRA LOCATELLI',clube:'C. M. PARANÁ',tempo:'43.79'},
+      {raia:5,matr:122658,faixa:'75+',nome:'ZEILA SILVA',clube:'AMARAL MASTERS',tempo:'48.53'},
+      {raia:6,matr:105988,faixa:'65+',nome:'CRISTINA GUIMARAES SAMPAIO',clube:'LS SWIM TEAM',tempo:'54.00'},
+      {raia:7,matr:137086,faixa:'65+',nome:'VERA LÚCIA AUER',clube:'AMARACQUA',tempo:'1:45.47'},
+    ]},
+    { serie:2, horario:'14:25', atletas:[
+      {raia:1,matr:134675,faixa:'45+',nome:'GISLAINE HRYCYK PINHEIRO',clube:'SANTA MONICA',tempo:'1:17.00'},
+      {raia:2,matr:137009,faixa:'40+',nome:'PENELOPE ADRIANE LIEBL',clube:'APCEF PR',tempo:'55.09'},
+      {raia:3,matr:132704,faixa:'45+',nome:'ADRIANE DEQUI PALMA',clube:'ACQUAMASTER/FOZ',tempo:'47.80'},
+      {raia:4,matr:128464,faixa:'40+',nome:'SHEILA TAVARES NASCIMENTO',clube:'APAN MARINGÁ-PR',tempo:'38.79'},
+      {raia:5,matr:115301,faixa:'45+',nome:'JANAINA MENEGHETTI',clube:'APCEF PR',tempo:'41.36'},
+      {raia:6,matr:2937,faixa:'55+',nome:'FARIDA YATIYO OKUHARA',clube:'C.C MARINGÁ',tempo:'48.00'},
+      {raia:7,matr:136873,faixa:'35+',nome:'ELAINE SEFRIAN PEINADO',clube:'TOLEDO',tempo:'1:15.32'},
+    ]},
+    { serie:3, horario:'14:28', atletas:[
+      {raia:2,matr:131912,faixa:'30+',nome:'STELLA GUALDEZ',clube:'AMARACQUA',tempo:'1:01.09'},
+      {raia:3,matr:129696,faixa:'25+',nome:'FERNANDA SILVA BEATRIZ',clube:'AMARACQUA',tempo:'52.96'},
+      {raia:4,matr:8031,faixa:'35+',nome:'VERONICA ANDRADE BALSANO',clube:'APAN PONTA GROSSA',tempo:'30.50'},
+      {raia:5,matr:137089,faixa:'PRÉ',nome:'THAYNA COMIN',clube:'AMARACQUA',tempo:'45.30'},
+      {raia:6,matr:126770,faixa:'35+',nome:'BRUNA DO AMARAL',clube:'AMARACQUA',tempo:'1:00.70'},
+    ]},
+  ]},
+  { num:4, nome:'50 Metros Costas Masculino', horario:'14:31', termino:'14:42', series:[
+    { serie:1, horario:'14:31', atletas:[
+      {raia:1,matr:114959,faixa:'75+',nome:'AUGUSTO CESAR THOMAZ',clube:'CATARATAS NATAÇÃO',tempo:'56.27'},
+      {raia:2,matr:3588,faixa:'75+',nome:'LUIZ FLAVIO MONTEIRO PORTO',clube:'C.C MARINGÁ',tempo:'52.10'},
+      {raia:3,matr:3376,faixa:'70+',nome:'FRANCISCO FRUET',clube:'CURITIBANO',tempo:'44.25'},
+      {raia:4,matr:105885,faixa:'65+',nome:'SERGIO MAKRAKIS',clube:'TOLEDO',tempo:'41.66'},
+      {raia:5,matr:114011,faixa:'65+',nome:'IVAN GOUVEA DO CARMO',clube:'AMARAL MASTERS',tempo:'41.93'},
+      {raia:6,matr:127999,faixa:'60+',nome:'ROBERTO SIMEAO RONCATO',clube:'TOLEDO',tempo:'47.49'},
+      {raia:7,matr:105963,faixa:'70+',nome:'LAURI CESAR BITTENCOURT',clube:'FÁBRICA DE NADADORES',tempo:'55.04'},
+    ]},
+    { serie:2, horario:'14:34', atletas:[
+      {raia:1,matr:134892,faixa:'50+',nome:'NILTON DA HORA FIGUEIREDO',clube:'TOLEDO',tempo:'54.90'},
+      {raia:2,matr:123225,faixa:'60+',nome:'CESAR HIDEKI INADA',clube:'DKM SPORTS',tempo:'39.78'},
+      {raia:3,matr:107934,faixa:'60+',nome:'MARCELO MONTEIRO DE OLIVEIRA',clube:'APAN MARINGÁ-PR',tempo:'36.77'},
+      {raia:4,matr:1412,faixa:'60+',nome:'GLAUCO ALVES DA SILVA',clube:'C.C MARINGÁ',tempo:'32.96'},
+      {raia:5,matr:25767,faixa:'55+',nome:'LUCIANO GARDANO ELIAS BUCHARLES',clube:'LONDRINA CC',tempo:'33.31'},
+      {raia:6,matr:7626,faixa:'50+',nome:'CARLO FABIANO TANNOURI',clube:'ACQUAMASTER/FOZ',tempo:'38.71'},
+      {raia:7,matr:23956,faixa:'55+',nome:'OSMAR AMARAL ARAUJO',clube:'ACQUAMASTER/FOZ',tempo:'48.22'},
+    ]},
+    { serie:3, horario:'14:37', atletas:[
+      {raia:1,matr:136614,faixa:'35+',nome:'WALLACE PAZETO DA SILVA REIS',clube:'MASTER ACQUAFLY',tempo:'S/T'},
+      {raia:2,matr:105959,faixa:'45+',nome:'RAFAEL LOURENÇO LEMOS',clube:'ACADEMIA GUSTAVO BORGES',tempo:'40.37'},
+      {raia:3,matr:107955,faixa:'40+',nome:'AYRTON JOSÉ JUNGLES PACHECO JUNIOR',clube:'TOLEDO',tempo:'32.01'},
+      {raia:4,matr:25820,faixa:'40+',nome:'EDUARDO MARAFON',clube:'DKM SPORTS',tempo:'27.48'},
+      {raia:5,matr:7693,faixa:'40+',nome:'FLAVIO AUGUSTO RABELLO MENEZES DE ALMEIDA',clube:'TOLEDO',tempo:'29.63'},
+      {raia:6,matr:105865,faixa:'40+',nome:'WALTER LOPES DE LIMA',clube:'APAN MARINGÁ-PR',tempo:'39.75'},
+      {raia:7,matr:136546,faixa:'40+',nome:'FABIO IEGER',clube:'SANTA MONICA',tempo:'51.49'},
+    ]},
+    { serie:4, horario:'14:40', atletas:[
+      {raia:3,matr:133173,faixa:'35+',nome:'LUCAS RODRIGUES MACHADO',clube:'SANTA MONICA',tempo:'38.41'},
+      {raia:4,matr:134891,faixa:'35+',nome:'FERNANDO ANDREOLA ZARDO',clube:'TOLEDO',tempo:'31.16'},
+      {raia:5,matr:135060,faixa:'PRÉ',nome:'GUSTAVO RUBEN TOMADON VEGA',clube:'ACQUAMASTER/FOZ',tempo:'35.61'},
+      {raia:6,matr:109130,faixa:'35+',nome:'FERNANDO GUSTAVO RODRIGUES BRISOLA',clube:'HARMONIA CLUBE DE CAMPO',tempo:'44.01'},
+    ]},
+  ]},
+  { num:5, nome:'200 Metros Livre Feminino', horario:'14:42', termino:'14:58', series:[
+    { serie:1, horario:'14:42', atletas:[
+      {raia:1,matr:132716,faixa:'55+',nome:'GIANE OLIVEIRA DA ROSA',clube:'TOLEDO',tempo:'S/T'},
+      {raia:2,matr:106168,faixa:'50+',nome:'JOSELIA LARGER MANFIO',clube:'TOLEDO',tempo:'3:13.26'},
+      {raia:3,matr:109307,faixa:'50+',nome:'CLAUDIA PEREIRA DE CARVALHO',clube:'LS SWIM TEAM',tempo:'3:10.00'},
+      {raia:4,matr:3065,faixa:'65+',nome:'ROSELI FERNANDES ALVES SILVA',clube:'DKM SPORTS',tempo:'2:39.25'},
+      {raia:5,matr:137070,faixa:'50+',nome:'DEBORAH SABBÁ GALVÃO',clube:'CORPO LIVRE',tempo:'3:10.00'},
+      {raia:6,matr:2922,faixa:'65+',nome:'DIVA CATANEO FUGANTI',clube:'ACQUANADE',tempo:'3:12.00'},
+      {raia:7,matr:2937,faixa:'55+',nome:'FARIDA YATIYO OKUHARA',clube:'C.C MARINGÁ',tempo:'3:20.00'},
+    ]},
+    { serie:2, horario:'14:46', atletas:[
+      {raia:2,matr:132706,faixa:'45+',nome:'PAULA GEHRING',clube:'FECAM',tempo:'3:01.23'},
+      {raia:3,matr:131753,faixa:'30+',nome:'LÍVIA VANZELI DE MARIA',clube:'ACQUAMASTER/FOZ',tempo:'2:50.00'},
+      {raia:4,matr:8063,faixa:'45+',nome:'LIGIA MARIA FACCI DE CARVALHO',clube:'DKM SPORTS',tempo:'2:36.76'},
+      {raia:5,matr:136615,faixa:'40+',nome:'JULIANA HIDEMI NONOSE KITAHARA',clube:'5º NADO',tempo:'2:45.00'},
+      {raia:6,matr:133291,faixa:'40+',nome:'KELLEN JESUS DE OLIVEIRA',clube:'AMARACQUA',tempo:'3:00.00'},
+      {raia:7,matr:128095,faixa:'40+',nome:'CLAU MOMESSO',clube:'TOLEDO',tempo:'6:00.00'},
+    ]},
+    { serie:3, horario:'14:53', atletas:[
+      {raia:3,matr:129696,faixa:'25+',nome:'FERNANDA SILVA BEATRIZ',clube:'AMARACQUA',tempo:'4:25.73'},
+      {raia:4,matr:131910,faixa:'PRÉ',nome:'NATHALYE RAYANA MEDEIROS ANTUNES',clube:'AMARACQUA',tempo:'2:40.00'},
+      {raia:5,matr:135929,faixa:'PRÉ',nome:'ANA THEREZA QUADROS MAES',clube:'SANTA MONICA',tempo:'3:00.00'},
+    ]},
+  ]},
+  { num:6, nome:'200 Metros Livre Masculino', horario:'14:58', termino:'15:20', series:[
+    { serie:1, horario:'14:58', atletas:[
+      {raia:1,matr:7305,faixa:'80+',nome:'IDELBRANDO LEITE DE LIMA',clube:'CATARATAS NATAÇÃO',tempo:'S/T'},
+      {raia:2,matr:108949,faixa:'75+',nome:'ROBERTO CASAGRANDE FILHO',clube:'APAN MARINGÁ-PR',tempo:'4:35.34'},
+      {raia:3,matr:118294,faixa:'70+',nome:'MANOEL JOAQUIM DE OLIVEIRA',clube:'TOLEDO',tempo:'3:28.72'},
+      {raia:4,matr:529,faixa:'75+',nome:'CELIO CARNEIRO DO AMARAL',clube:'AMARAL MASTERS',tempo:'3:06.61'},
+      {raia:5,matr:25790,faixa:'70+',nome:'ROBERTO COSTA',clube:'ACADEMIA GUSTAVO BORGES',tempo:'3:20.00'},
+      {raia:6,matr:108432,faixa:'70+',nome:'PEDRO NAZARENO DA SILVA',clube:'AMARAL MASTERS',tempo:'3:45.30'},
+      {raia:7,matr:105572,faixa:'75+',nome:'IRAN CARLOS STALLIVIERE CORRÊA',clube:'LIRA T. C.',tempo:'4:40.53'},
+    ]},
+    { serie:2, horario:'15:04', atletas:[
+      {raia:1,matr:121981,faixa:'55+',nome:'JOSÉ ANIZIO MACHADO',clube:'TOLEDO',tempo:'3:33.47'},
+      {raia:2,matr:7908,faixa:'65+',nome:'LELIO BRAGA DOS SANTOS',clube:'ACQUAMASTER/FOZ',tempo:'3:15.00'},
+      {raia:3,matr:117706,faixa:'60+',nome:'FRIEDRICH WOLFRAM SCHILLER',clube:'TOLEDO',tempo:'3:13.49'},
+      {raia:4,matr:5137,faixa:'60+',nome:'NILO JOJI MORISHITA',clube:'ML TEAM',tempo:'2:51.18'},
+      {raia:5,matr:2945,faixa:'65+',nome:'SILVIO SAITI IWATA',clube:'C.C MARINGÁ',tempo:'2:53.00'},
+      {raia:6,matr:105879,faixa:'65+',nome:'CARLOS SUMI',clube:'TOLEDO',tempo:'3:14.96'},
+      {raia:7,matr:117709,faixa:'55+',nome:'ALMIR ROGERIO DENIG BANDEIRA',clube:'TOLEDO',tempo:'3:17.65'},
+    ]},
+    { serie:3, horario:'15:08', atletas:[
+      {raia:1,matr:124982,faixa:'50+',nome:'FABIANO GALANTE',clube:'TOLEDO',tempo:'3:22.80'},
+      {raia:2,matr:123326,faixa:'50+',nome:'PAULO EDUARDO FENTI',clube:'FÁBRICA DE NADADORES',tempo:'2:45.00'},
+      {raia:3,matr:7742,faixa:'55+',nome:'WALCIR FRANZONI',clube:'C.C MARINGÁ',tempo:'2:41.06'},
+      {raia:4,matr:105767,faixa:'45+',nome:'FABIO RICARDO MARQUES',clube:'SANTA MONICA',tempo:'2:38.96'},
+      {raia:5,matr:118121,faixa:'45+',nome:'JOSÉ ROBERTO FRANZ',clube:'TOLEDO',tempo:'2:39.29'},
+      {raia:6,matr:111603,faixa:'50+',nome:'LUCIO PEREIRA DE OLIVEIRA',clube:'APAN PONTA GROSSA',tempo:'2:42.24'},
+      {raia:7,matr:107891,faixa:'50+',nome:'RICARDO ALENCAR DE ASSIS',clube:'ML TEAM',tempo:'3:15.00'},
+    ]},
+    { serie:4, horario:'15:12', atletas:[
+      {raia:1,matr:136614,faixa:'35+',nome:'WALLACE PAZETO DA SILVA REIS',clube:'MASTER ACQUAFLY',tempo:'S/T'},
+      {raia:2,matr:126731,faixa:'35+',nome:'FERNANDO MOSCONI',clube:'TOLEDO',tempo:'2:39.40'},
+      {raia:3,matr:125720,faixa:'30+',nome:'JHONATAN HENRIQUE DELFINO MACHADO',clube:'FÁBRICA DE NADADORES',tempo:'2:21.54'},
+      {raia:4,matr:7907,faixa:'45+',nome:'OMAR GIDEONE PINHEIRO',clube:'CATARATAS NATAÇÃO',tempo:'2:12.13'},
+      {raia:5,matr:112844,faixa:'35+',nome:'LUIS FELIPE DAMHA',clube:'FECAM',tempo:'2:20.00'},
+      {raia:6,matr:132288,faixa:'45+',nome:'JULIANO NARDON NIELSEN',clube:'APAN MARINGÁ-PR',tempo:'2:25.00'},
+      {raia:7,matr:136272,faixa:'40+',nome:'LAWRENCE MAYER MALANSKI',clube:'MASTER ACQUAFLY',tempo:'2:40.00'},
+    ]},
+    { serie:5, horario:'15:16', atletas:[
+      {raia:1,matr:109811,faixa:'30+',nome:'ANÉSIO AUGUSTO FAVERO',clube:'MASTER ACQUAFLY',tempo:'S/T'},
+      {raia:2,matr:122235,faixa:'30+',nome:'TEOTONIO JOSÉ DE SOUZA JUNIOR',clube:'ACQUAMASTER/FOZ',tempo:'2:58.21'},
+      {raia:3,matr:137085,faixa:'30+',nome:'LUCAS GRZYGORCZYK',clube:'AMARACQUA',tempo:'2:30.00'},
+      {raia:4,matr:129751,faixa:'25+',nome:'JÚLIO NOBUYUKI ITO',clube:'APAN MARINGÁ-PR',tempo:'1:58.13'},
+      {raia:5,matr:129255,faixa:'25+',nome:'JOÃO GUILHERME FIORI ORTEGA',clube:'APAN MARINGÁ-PR',tempo:'2:26.87'},
+      {raia:6,matr:133212,faixa:'25+',nome:'LUCAS GABRIEL MEDEIROS DA SILVA',clube:'TOLEDO',tempo:'2:45.01'},
+      {raia:7,matr:127951,faixa:'25+',nome:'VINÍCIUS DOS REIS VIEIRA',clube:'TOLEDO',tempo:'3:01.32'},
+    ]},
+  ]},
+  { num:7, nome:'50 Metros Borboleta Feminino', horario:'15:20', termino:'15:24', series:[
+    { serie:1, horario:'15:20', atletas:[
+      {raia:1,matr:7755,faixa:'65+',nome:'SHIRLEY CHOW SUEN KIU',clube:'ACQUAMASTER/FOZ',tempo:'1:10.57'},
+      {raia:2,matr:112780,faixa:'55+',nome:'ELISIANE MARA BRITO',clube:'APCEF PR',tempo:'54.20'},
+      {raia:3,matr:113742,faixa:'45+',nome:'RENATA MERCURIO MACEDO DA SILVA',clube:'FÁBRICA DE NADADORES',tempo:'42.33'},
+      {raia:4,matr:115301,faixa:'45+',nome:'JANAINA MENEGHETTI',clube:'APCEF PR',tempo:'37.37'},
+      {raia:5,matr:2920,faixa:'55+',nome:'LIANA YURI FUKUDA',clube:'DKM SPORTS',tempo:'39.25'},
+      {raia:6,matr:105846,faixa:'65+',nome:'ROSEMARI RODRIGUES',clube:'APCEF PR',tempo:'45.70'},
+      {raia:7,matr:115258,faixa:'70+',nome:'HILDA EURIKO NAKASHIMA',clube:'APCEF PR',tempo:'1:10.36'},
+    ]},
+    { serie:2, horario:'15:22', atletas:[
+      {raia:2,matr:137029,faixa:'40+',nome:'THAYANE MENDES VIERO',clube:'SANTA MONICA',tempo:'55.00'},
+      {raia:3,matr:128464,faixa:'40+',nome:'SHEILA TAVARES NASCIMENTO',clube:'APAN MARINGÁ-PR',tempo:'40.00'},
+      {raia:4,matr:7354,faixa:'45+',nome:'CARLA HORST VAINE',clube:'DKM SPORTS',tempo:'34.50'},
+      {raia:5,matr:116236,faixa:'35+',nome:'MIRIAN AYUMI KURAUTI',clube:'USSR/UNICAMP',tempo:'35.18'},
+      {raia:6,matr:137038,faixa:'25+',nome:'ANA CAROLINA FIGUEIREDO FELIX',clube:'MASTER ACQUAFLY',tempo:'43.00'},
+      {raia:7,matr:136278,faixa:'40+',nome:'LESSANDRA NIEHUES MAIKUMA',clube:'MASTER ACQUAFLY',tempo:'59.00'},
+    ]},
+  ]},
+  { num:8, nome:'50 Metros Borboleta Masculino', horario:'15:24', termino:'15:32', series:[
+    { serie:1, horario:'15:24', atletas:[
+      {raia:1,matr:105839,faixa:'70+',nome:'EDUARDO AUGUSTO TOMANIK',clube:'FÁBRICA DE NADADORES',tempo:'1:14.87'},
+      {raia:2,matr:108432,faixa:'70+',nome:'PEDRO NAZARENO DA SILVA',clube:'AMARAL MASTERS',tempo:'51.48'},
+      {raia:3,matr:7045,faixa:'65+',nome:'CARLOS ALBERTO FERNANDES DA SILVA',clube:'C.C MARINGÁ',tempo:'36.30'},
+      {raia:4,matr:128048,faixa:'65+',nome:'FLAVIO HENRIQUE DA ROSA UREN',clube:'DKM SPORTS',tempo:'33.07'},
+      {raia:5,matr:124837,faixa:'65+',nome:'ARNALDO DEHE NETO',clube:'APAN MARINGÁ-PR',tempo:'35.20'},
+      {raia:6,matr:2945,faixa:'65+',nome:'SILVIO SAITI IWATA',clube:'C.C MARINGÁ',tempo:'38.00'},
+      {raia:7,matr:105963,faixa:'70+',nome:'LAURI CESAR BITTENCOURT',clube:'FÁBRICA DE NADADORES',tempo:'55.00'},
+    ]},
+    { serie:2, horario:'15:26', atletas:[
+      {raia:1,matr:105886,faixa:'50+',nome:'RODRIGO GOUVEIA DE OLIVEIRA NOBRE',clube:'ACQUAMASTER/FOZ',tempo:'44.78'},
+      {raia:2,matr:136610,faixa:'45+',nome:'ROGERIO IMAI',clube:'FÁBRICA DE NADADORES',tempo:'36.00'},
+      {raia:3,matr:119322,faixa:'50+',nome:'MARCOS ALESSANDRO CARNEIRO',clube:'APAN MARINGÁ-PR',tempo:'34.00'},
+      {raia:4,matr:105974,faixa:'45+',nome:'FELIPE DE A C LUIZ',clube:'CURITIBANO',tempo:'29.80'},
+      {raia:5,matr:25661,faixa:'55+',nome:'FABIO CARNEIRO BARBOSA',clube:'FÁBRICA DE NADADORES',tempo:'30.48'},
+      {raia:6,matr:111276,faixa:'45+',nome:'RITIELER GAMA CORREA',clube:'APAN MARINGÁ-PR',tempo:'34.09'},
+      {raia:7,matr:136544,faixa:'60+',nome:'MARCELO GECHELE CLETO',clube:'AMARAL MASTERS',tempo:'40.50'},
+    ]},
+    { serie:3, horario:'15:28', atletas:[
+      {raia:1,matr:113667,faixa:'35+',nome:'TIAGO JUNIOR DOS SANTOS',clube:'APCEF PR',tempo:'50.00'},
+      {raia:2,matr:137075,faixa:'35+',nome:'ANDRÉ MORADOR FRANÇA PAULINO',clube:'FÁBRICA DE NADADORES',tempo:'35.00'},
+      {raia:3,matr:7693,faixa:'40+',nome:'FLAVIO AUGUSTO RABELLO MENEZES DE ALMEIDA',clube:'TOLEDO',tempo:'30.30'},
+      {raia:4,matr:109619,faixa:'40+',nome:'JUNIOR CUSTÓDIO ZAMPAR',clube:'DKM SPORTS',tempo:'29.97'},
+      {raia:5,matr:111884,faixa:'40+',nome:'ALEXANDRE KEITI INOUE',clube:'APAN MARINGÁ-PR',tempo:'30.00'},
+      {raia:6,matr:136591,faixa:'40+',nome:'RODRIGO LUIS MUSSI',clube:'5º NADO',tempo:'35.00'},
+      {raia:7,matr:109130,faixa:'35+',nome:'FERNANDO GUSTAVO RODRIGUES BRISOLA',clube:'HARMONIA CLUBE DE CAMPO',tempo:'37.40'},
+    ]},
+    { serie:4, horario:'15:30', atletas:[
+      {raia:1,matr:109811,faixa:'30+',nome:'ANÉSIO AUGUSTO FAVERO',clube:'MASTER ACQUAFLY',tempo:'S/T'},
+      {raia:2,matr:136423,faixa:'30+',nome:'GABRIEL JONATHAN SOUSA ANDRADE',clube:'MASTER ACQUAFLY',tempo:'35.00'},
+      {raia:3,matr:126693,faixa:'35+',nome:'BRUNO HENRIQUE PACAGNAN',clube:'FÁBRICA DE NADADORES',tempo:'30.91'},
+      {raia:4,matr:110983,faixa:'35+',nome:'RUDÁ RYUITI FURUKITA BAPTISTA',clube:'WINNERS',tempo:'30.18'},
+      {raia:5,matr:113133,faixa:'35+',nome:'RENAN DA SILVA TRINTIN',clube:'APAN MARINGÁ-PR',tempo:'30.87'},
+      {raia:6,matr:132565,faixa:'35+',nome:'MARCIO FACCI JUNIOR',clube:'APAN MARINGÁ-PR',tempo:'31.45'},
+      {raia:7,matr:133212,faixa:'25+',nome:'LUCAS GABRIEL MEDEIROS DA SILVA',clube:'TOLEDO',tempo:'36.90'},
+    ]},
+    { serie:5, horario:'15:31', atletas:[
+      {raia:3,matr:123192,faixa:'25+',nome:'BRUNO BITTAR MONTEIRO DE OLIVEIRA',clube:'APAN MARINGÁ-PR',tempo:'30.00'},
+      {raia:4,matr:129751,faixa:'25+',nome:'JÚLIO NOBUYUKI ITO',clube:'APAN MARINGÁ-PR',tempo:'24.67'},
+      {raia:5,matr:131360,faixa:'PRÉ',nome:'JOAO PEDRO MEURER DIAS',clube:'TOLEDO',tempo:'27.50'},
+      {raia:6,matr:129270,faixa:'PRÉ',nome:'PEDRO HENRIQUE ROSSETTO',clube:'FÁBRICA DE NADADORES',tempo:'32.27'},
+    ]},
+  ]},
+  { num:9, nome:'100 Metros Peito Feminino', horario:'15:32', termino:'15:39', series:[
+    { serie:1, horario:'15:32', atletas:[
+      {raia:1,matr:7561,faixa:'75+',nome:'NADIR BARANHUK ARNS',clube:'AMARAL MASTERS',tempo:'2:56.58'},
+      {raia:2,matr:107797,faixa:'60+',nome:'ELIANA KIND',clube:'TOLEDO',tempo:'2:21.61'},
+      {raia:3,matr:7958,faixa:'50+',nome:'GLADIS PASA',clube:'ACQUAMASTER/FOZ',tempo:'1:45.99'},
+      {raia:4,matr:2922,faixa:'65+',nome:'DIVA CATANEO FUGANTI',clube:'ACQUANADE',tempo:'1:30.00'},
+      {raia:5,matr:110896,faixa:'65+',nome:'RAQUEL BARROSO SAMPAIO',clube:'DKM SPORTS',tempo:'1:43.69'},
+      {raia:6,matr:7329,faixa:'70+',nome:'ZILDA BENKENDORF MAIOCHI',clube:'DKM SPORTS',tempo:'2:07.27'},
+      {raia:7,matr:107950,faixa:'60+',nome:'TEREZA MARIA RODRIGUES TURINI',clube:'LIRA T. C.',tempo:'2:24.36'},
+    ]},
+    { serie:2, horario:'15:36', atletas:[
+      {raia:2,matr:131328,faixa:'25+',nome:'LAURA LUIZA BAZI',clube:'TOLEDO',tempo:'2:04.90'},
+      {raia:3,matr:136278,faixa:'40+',nome:'LESSANDRA NIEHUES MAIKUMA',clube:'MASTER ACQUAFLY',tempo:'2:03.00'},
+      {raia:4,matr:51447,faixa:'40+',nome:'LAÍS KELLY SILVA RODRIGUES',clube:'ACQUAMASTER/FOZ',tempo:'1:26.05'},
+      {raia:5,matr:137089,faixa:'PRÉ',nome:'THAYNA COMIN',clube:'AMARACQUA',tempo:'1:43.50'},
+      {raia:6,matr:133608,faixa:'40+',nome:'GESLIANI BIAGGI',clube:'TOLEDO',tempo:'2:03.09'},
+    ]},
+  ]},
+  { num:10, nome:'100 Metros Peito Masculino', horario:'15:39', termino:'15:52', series:[
+    { serie:1, horario:'15:39', atletas:[
+      {raia:1,matr:7305,faixa:'80+',nome:'IDELBRANDO LEITE DE LIMA',clube:'CATARATAS NATAÇÃO',tempo:'S/T'},
+      {raia:2,matr:529,faixa:'75+',nome:'CELIO CARNEIRO DO AMARAL',clube:'AMARAL MASTERS',tempo:'1:46.75'},
+      {raia:3,matr:131712,faixa:'55+',nome:'MARIO SERGIO SPOLADORE FILHO',clube:'AMARAL MASTERS',tempo:'1:33.00'},
+      {raia:4,matr:105885,faixa:'65+',nome:'SERGIO MAKRAKIS',clube:'TOLEDO',tempo:'1:25.77'},
+      {raia:5,matr:3376,faixa:'70+',nome:'FRANCISCO FRUET',clube:'CURITIBANO',tempo:'1:31.70'},
+      {raia:6,matr:25790,faixa:'70+',nome:'ROBERTO COSTA',clube:'ACADEMIA GUSTAVO BORGES',tempo:'1:45.00'},
+      {raia:7,matr:105861,faixa:'55+',nome:'PAULO R PALLU',clube:'UTFPR',tempo:'1:47.35'},
+    ]},
+    { serie:2, horario:'15:42', atletas:[
+      {raia:2,matr:124982,faixa:'50+',nome:'FABIANO GALANTE',clube:'TOLEDO',tempo:'1:55.27'},
+      {raia:3,matr:105959,faixa:'45+',nome:'RAFAEL LOURENÇO LEMOS',clube:'ACADEMIA GUSTAVO BORGES',tempo:'1:33.00'},
+      {raia:4,matr:128902,faixa:'45+',nome:'MAURICIO ISTAKE',clube:'FÁBRICA DE NADADORES',tempo:'1:30.76'},
+      {raia:5,matr:105817,faixa:'50+',nome:'RENATO MARTINS SIMOES',clube:'HARMONIA CLUBE DE CAMPO',tempo:'1:31.90'},
+      {raia:6,matr:134892,faixa:'50+',nome:'NILTON DA HORA FIGUEIREDO',clube:'TOLEDO',tempo:'1:42.66'},
+    ]},
+    { serie:3, horario:'15:45', atletas:[
+      {raia:1,matr:105865,faixa:'40+',nome:'WALTER LOPES DE LIMA',clube:'APAN MARINGÁ-PR',tempo:'1:29.23'},
+      {raia:2,matr:136272,faixa:'40+',nome:'LAWRENCE MAYER MALANSKI',clube:'MASTER ACQUAFLY',tempo:'1:27.00'},
+      {raia:3,matr:136207,faixa:'45+',nome:'FÁBIO KOKI KITAHARA',clube:'5º NADO',tempo:'1:25.00'},
+      {raia:4,matr:7907,faixa:'45+',nome:'OMAR GIDEONE PINHEIRO',clube:'CATARATAS NATAÇÃO',tempo:'1:17.20'},
+      {raia:5,matr:105791,faixa:'40+',nome:'HEBER SANDER ZULIAN',clube:'TOLEDO',tempo:'1:23.62'},
+      {raia:6,matr:118121,faixa:'45+',nome:'JOSÉ ROBERTO FRANZ',clube:'TOLEDO',tempo:'1:26.19'},
+      {raia:7,matr:110972,faixa:'40+',nome:'HUGO ZENI NETO',clube:'FÁBRICA DE NADADORES',tempo:'1:29.19'},
+    ]},
+    { serie:4, horario:'15:47', atletas:[
+      {raia:1,matr:133280,faixa:'25+',nome:'JEFERSON MARTINS',clube:'AMARACQUA',tempo:'2:13.58'},
+      {raia:2,matr:137088,faixa:'35+',nome:'LEONARDO SIQUEIRA',clube:'AMARACQUA',tempo:'1:29.00'},
+      {raia:3,matr:122565,faixa:'40+',nome:'GUILHERME KERNISKI DEMANTOVA',clube:'DKM SPORTS',tempo:'1:20.58'},
+      {raia:4,matr:109880,faixa:'40+',nome:'RICARDO GOBETTI SUZUKI',clube:'FÁBRICA DE NADADORES',tempo:'1:11.04'},
+      {raia:5,matr:128337,faixa:'30+',nome:'FELIPE DE DEUS',clube:'SANTA MONICA',tempo:'1:14.99'},
+      {raia:6,matr:107907,faixa:'40+',nome:'JOSE LUIS SORIANI FILHO',clube:'FÁBRICA DE NADADORES',tempo:'1:22.36'},
+      {raia:7,matr:129122,faixa:'30+',nome:'FELIPE THEODORO GUIMARAES',clube:'ACQUAMASTER/FOZ',tempo:'1:47.00'},
+    ]},
+    { serie:5, horario:'15:50', atletas:[
+      {raia:1,matr:115263,faixa:'25+',nome:'JEFERSON RIBEIRO DE SOUZA',clube:'TOLEDO',tempo:'1:17.90'},
+      {raia:4,matr:137084,faixa:'PRÉ',nome:'EDUARDO DINIZ',clube:'AMARACQUA',tempo:'1:10.00'},
+      {raia:5,matr:137087,faixa:'25+',nome:'RAFAEL DE FRANÇA PEREIRA',clube:'FÁBRICA DE NADADORES',tempo:'1:10.00'},
+    ]},
+  ]},
+  { num:11, nome:'50 Metros Livre Feminino', horario:'15:52', termino:'16:01', series:[
+    { serie:1, horario:'15:52', atletas:[
+      {raia:1,matr:3713,faixa:'90+',nome:'JULIA TOSIKO ITIMURA',clube:'ML TEAM',tempo:'2:23.21'},
+      {raia:2,matr:115258,faixa:'70+',nome:'HILDA EURIKO NAKASHIMA',clube:'APCEF PR',tempo:'51.27'},
+      {raia:3,matr:105988,faixa:'65+',nome:'CRISTINA GUIMARAES SAMPAIO',clube:'LS SWIM TEAM',tempo:'41.00'},
+      {raia:4,matr:3390,faixa:'65+',nome:'PLANTINA DIAS FERNANDES',clube:'AEAPR',tempo:'38.61'},
+      {raia:5,matr:105846,faixa:'65+',nome:'ROSEMARI RODRIGUES',clube:'APCEF PR',tempo:'40.03'},
+      {raia:6,matr:107956,faixa:'70+',nome:'MIRIAM RANGEL',clube:'DKM SPORTS',tempo:'48.00'},
+      {raia:7,matr:137086,faixa:'65+',nome:'VERA LÚCIA AUER',clube:'AMARACQUA',tempo:'1:22.31'},
+    ]},
+    { serie:2, horario:'15:55', atletas:[
+      {raia:1,matr:3521,faixa:'60+',nome:'FATIMA ELAINE ROMAO IWATA',clube:'C.C MARINGÁ',tempo:'54.45'},
+      {raia:2,matr:115361,faixa:'60+',nome:'TEREZA HARUE FUGIVALA',clube:'APCEF PR',tempo:'49.05'},
+      {raia:3,matr:113742,faixa:'45+',nome:'RENATA MERCURIO MACEDO DA SILVA',clube:'FÁBRICA DE NADADORES',tempo:'41.37'},
+      {raia:4,matr:1798,faixa:'65+',nome:'SILVANA SCHIMITI YAMACITA',clube:'DKM SPORTS',tempo:'33.95'},
+      {raia:5,matr:7754,faixa:'55+',nome:'MARCIA CRISTINA VETTORELLO GENIAKE',clube:'ACQUAMASTER/FOZ',tempo:'37.05'},
+      {raia:6,matr:122678,faixa:'45+',nome:'ELIZANGELA APARECIDA SILVA',clube:'APAN MARINGÁ-PR',tempo:'47.41'},
+      {raia:7,matr:134675,faixa:'45+',nome:'GISLAINE HRYCYK PINHEIRO',clube:'SANTA MONICA',tempo:'54.40'},
+    ]},
+    { serie:3, horario:'15:57', atletas:[
+      {raia:1,matr:137083,faixa:'40+',nome:'CAMILA BUENO MARIANO DINIZ DOS SANTOS',clube:'AMARACQUA',tempo:'1:05.00'},
+      {raia:2,matr:133608,faixa:'40+',nome:'GESLIANI BIAGGI',clube:'TOLEDO',tempo:'44.90'},
+      {raia:3,matr:132706,faixa:'45+',nome:'PAULA GEHRING',clube:'FECAM',tempo:'37.17'},
+      {raia:4,matr:137062,faixa:'45+',nome:'LUANA DE FATIMA SANCHES MUSSI',clube:'5º NADO',tempo:'35.00'},
+      {raia:5,matr:113827,faixa:'45+',nome:'ALESSANDRA BONACIN BUTKIEWICZ',clube:'SANTA MONICA',tempo:'35.42'},
+      {raia:6,matr:137009,faixa:'40+',nome:'PENELOPE ADRIANE LIEBL',clube:'APCEF PR',tempo:'44.55'},
+      {raia:7,matr:133291,faixa:'40+',nome:'KELLEN JESUS DE OLIVEIRA',clube:'AMARACQUA',tempo:'47.00'},
+    ]},
+    { serie:4, horario:'15:59', atletas:[
+      {raia:1,matr:136873,faixa:'35+',nome:'ELAINE SEFRIAN PEINADO',clube:'TOLEDO',tempo:'1:00.39'},
+      {raia:2,matr:136798,faixa:'PRÉ',nome:'HAYANE CAROLINE CARDOZO DE LARA',clube:'AMARACQUA',tempo:'45.00'},
+      {raia:3,matr:136906,faixa:'30+',nome:'LUIZA NISHI PIGATTO',clube:'APAN MARINGÁ-PR',tempo:'36.23'},
+      {raia:4,matr:115345,faixa:'40+',nome:'MARIANA DE CASTRO SILVA',clube:'APCEF PR',tempo:'35.52'},
+      {raia:5,matr:137014,faixa:'35+',nome:'FLÁVIA DOS REIS PENTEADO SUZUKI',clube:'FÁBRICA DE NADADORES',tempo:'35.99'},
+      {raia:6,matr:136618,faixa:'35+',nome:'JACQUELINE MAGNO GOIS SANTOS',clube:'SANTA MONICA',tempo:'44.65'},
+      {raia:7,matr:131912,faixa:'30+',nome:'STELLA GUALDEZ',clube:'AMARACQUA',tempo:'55.21'},
+    ]},
+  ]},
+  { num:12, nome:'50 Metros Livre Masculino', horario:'16:01', termino:'16:10', series:[
+    { serie:1, horario:'16:01', atletas:[
+      {raia:1,matr:114959,faixa:'75+',nome:'AUGUSTO CESAR THOMAZ',clube:'CATARATAS NATAÇÃO',tempo:'47.65'},
+      {raia:2,matr:3588,faixa:'75+',nome:'LUIZ FLAVIO MONTEIRO PORTO',clube:'C.C MARINGÁ',tempo:'40.19'},
+      {raia:3,matr:105781,faixa:'60+',nome:'HELIO JOSE NERY',clube:'FÁBRICA DE NADADORES',tempo:'36.00'},
+      {raia:4,matr:114011,faixa:'65+',nome:'IVAN GOUVEA DO CARMO',clube:'AMARAL MASTERS',tempo:'32.97'},
+      {raia:5,matr:136544,faixa:'60+',nome:'MARCELO GECHELE CLETO',clube:'AMARAL MASTERS',tempo:'35.65'},
+      {raia:6,matr:105884,faixa:'65+',nome:'NELSON A SANDER',clube:'TOLEDO',tempo:'36.45'},
+      {raia:7,matr:108048,faixa:'60+',nome:'FERNANDO ESPINOZA',clube:'TOLEDO',tempo:'44.34'},
+    ]},
+    { serie:2, horario:'16:03', atletas:[
+      {raia:2,matr:7742,faixa:'55+',nome:'WALCIR FRANZONI',clube:'C.C MARINGÁ',tempo:'31.66'},
+      {raia:3,matr:112738,faixa:'55+',nome:'LUIS PAULO GOMES MASCARENHAS',clube:'C. M. PARANÁ',tempo:'29.87'},
+      {raia:4,matr:25661,faixa:'55+',nome:'FABIO CARNEIRO BARBOSA',clube:'FÁBRICA DE NADADORES',tempo:'27.04'},
+      {raia:5,matr:107934,faixa:'60+',nome:'MARCELO MONTEIRO DE OLIVEIRA',clube:'APAN MARINGÁ-PR',tempo:'29.51'},
+      {raia:6,matr:122669,faixa:'60+',nome:'MARCELO GONÇALVES BOSKOVITZ',clube:'DKM SPORTS',tempo:'30.59'},
+    ]},
+    { serie:3, horario:'16:04', atletas:[
+      {raia:1,matr:136546,faixa:'40+',nome:'FABIO IEGER',clube:'SANTA MONICA',tempo:'42.40'},
+      {raia:2,matr:107891,faixa:'50+',nome:'RICARDO ALENCAR DE ASSIS',clube:'ML TEAM',tempo:'32.50'},
+      {raia:3,matr:136610,faixa:'45+',nome:'ROGERIO IMAI',clube:'FÁBRICA DE NADADORES',tempo:'30.63'},
+      {raia:4,matr:25767,faixa:'55+',nome:'LUCIANO GARDANO ELIAS BUCHARLES',clube:'LONDRINA CC',tempo:'26.79'},
+      {raia:5,matr:105974,faixa:'45+',nome:'FELIPE DE A C LUIZ',clube:'CURITIBANO',tempo:'27.10'},
+      {raia:6,matr:111603,faixa:'50+',nome:'LUCIO PEREIRA DE OLIVEIRA',clube:'APAN PONTA GROSSA',tempo:'32.38'},
+      {raia:7,matr:105886,faixa:'50+',nome:'RODRIGO GOUVEIA DE OLIVEIRA NOBRE',clube:'ACQUAMASTER/FOZ',tempo:'33.68'},
+    ]},
+    { serie:4, horario:'16:06', atletas:[
+      {raia:1,matr:113667,faixa:'35+',nome:'TIAGO JUNIOR DOS SANTOS',clube:'APCEF PR',tempo:'50.00'},
+      {raia:2,matr:137079,faixa:'40+',nome:'THIAGO FANELLI FERRAIOL',clube:'APAN MARINGÁ-PR',tempo:'32.00'},
+      {raia:3,matr:111884,faixa:'40+',nome:'ALEXANDRE KEITI INOUE',clube:'APAN MARINGÁ-PR',tempo:'28.72'},
+      {raia:4,matr:25820,faixa:'40+',nome:'EDUARDO MARAFON',clube:'DKM SPORTS',tempo:'25.01'},
+      {raia:5,matr:107955,faixa:'40+',nome:'AYRTON JOSÉ JUNGLES PACHECO JUNIOR',clube:'TOLEDO',tempo:'26.05'},
+      {raia:6,matr:136591,faixa:'40+',nome:'RODRIGO LUIS MUSSI',clube:'5º NADO',tempo:'29.35'},
+      {raia:7,matr:132924,faixa:'35+',nome:'JOAO RAFAEL RONSONI',clube:'ACQUAMASTER/FOZ',tempo:'33.00'},
+    ]},
+    { serie:5, horario:'16:08', atletas:[
+      {raia:1,matr:137026,faixa:'25+',nome:'ACAUÃ ZAMBERLAN',clube:'C.C MARINGÁ',tempo:'S/T'},
+      {raia:2,matr:126731,faixa:'35+',nome:'FERNANDO MOSCONI',clube:'TOLEDO',tempo:'29.56'},
+      {raia:3,matr:105812,faixa:'35+',nome:'BRUNO FERRARI SILVA',clube:'APAN MARINGÁ-PR',tempo:'28.84'},
+      {raia:4,matr:134891,faixa:'35+',nome:'FERNANDO ANDREOLA ZARDO',clube:'TOLEDO',tempo:'25.10'},
+      {raia:5,matr:21837,faixa:'35+',nome:'SILVIO ROMAO IWATA',clube:'C.C MARINGÁ',tempo:'27.00'},
+      {raia:6,matr:136423,faixa:'30+',nome:'GABRIEL JONATHAN SOUSA ANDRADE',clube:'MASTER ACQUAFLY',tempo:'29.53'},
+      {raia:7,matr:133173,faixa:'35+',nome:'LUCAS RODRIGUES MACHADO',clube:'SANTA MONICA',tempo:'30.58'},
+    ]},
+    { serie:6, horario:'16:09', atletas:[
+      {raia:3,matr:129270,faixa:'PRÉ',nome:'PEDRO HENRIQUE ROSSETTO',clube:'FÁBRICA DE NADADORES',tempo:'29.89'},
+      {raia:4,matr:123192,faixa:'25+',nome:'BRUNO BITTAR MONTEIRO DE OLIVEIRA',clube:'APAN MARINGÁ-PR',tempo:'27.52'},
+      {raia:5,matr:135060,faixa:'PRÉ',nome:'GUSTAVO RUBEN TOMADON VEGA',clube:'ACQUAMASTER/FOZ',tempo:'28.84'},
+    ]},
+  ]},
+  { num:13, nome:'200 Metros Costas Feminino', horario:'16:10', termino:'16:31', series:[
+    { serie:1, horario:'16:10', atletas:[
+      {raia:1,matr:23951,faixa:'70+',nome:'ANILDA KUNSLER SCHMITZ',clube:'ACQUAMASTER/FOZ',tempo:'5:40.77'},
+      {raia:2,matr:7329,faixa:'70+',nome:'ZILDA BENKENDORF MAIOCHI',clube:'DKM SPORTS',tempo:'4:36.87'},
+      {raia:3,matr:122658,faixa:'75+',nome:'ZEILA SILVA',clube:'AMARAL MASTERS',tempo:'4:15.72'},
+      {raia:4,matr:1798,faixa:'65+',nome:'SILVANA SCHIMITI YAMACITA',clube:'DKM SPORTS',tempo:'3:20.50'},
+      {raia:5,matr:5013,faixa:'70+',nome:'LYS ROSITA BOEIRA LOCATELLI',clube:'C. M. PARANÁ',tempo:'3:40.00'},
+      {raia:6,matr:107797,faixa:'60+',nome:'ELIANA KIND',clube:'TOLEDO',tempo:'4:21.48'},
+      {raia:7,matr:107910,faixa:'65+',nome:'MARIA APARECIDA SERT',clube:'APAN MARINGÁ-PR',tempo:'4:59.58'},
+    ]},
+    { serie:2, horario:'16:17', atletas:[
+      {raia:2,matr:128095,faixa:'40+',nome:'CLAU MOMESSO',clube:'TOLEDO',tempo:'6:00.00'},
+      {raia:3,matr:2920,faixa:'55+',nome:'LIANA YURI FUKUDA',clube:'DKM SPORTS',tempo:'3:20.18'},
+      {raia:4,matr:8031,faixa:'35+',nome:'VERONICA ANDRADE BALSANO',clube:'APAN PONTA GROSSA',tempo:'2:25.00'},
+      {raia:5,matr:7354,faixa:'45+',nome:'CARLA HORST VAINE',clube:'DKM SPORTS',tempo:'2:57.64'},
+      {raia:6,matr:119968,faixa:'55+',nome:'MARISTELA CAVICCHIOLI MAKRAKIS',clube:'TOLEDO',tempo:'4:00.61'},
+    ]},
+    { serie:3, horario:'16:25', atletas:[
+      {raia:3,matr:122008,faixa:'25+',nome:'EVELIN ELOISA IGNACIO',clube:'TOLEDO',tempo:'4:26.16'},
+      {raia:4,matr:131910,faixa:'PRÉ',nome:'NATHALYE RAYANA MEDEIROS ANTUNES',clube:'AMARACQUA',tempo:'3:10.00'},
+      {raia:5,matr:135929,faixa:'PRÉ',nome:'ANA THEREZA QUADROS MAES',clube:'SANTA MONICA',tempo:'4:00.00'},
+    ]},
+  ]},
+  { num:14, nome:'200 Metros Costas Masculino', horario:'16:31', termino:'17:01', series:[
+    { serie:1, horario:'16:31', atletas:[
+      {raia:1,matr:3715,faixa:'80+',nome:'LUIS FABRICIANO MACHADO',clube:'MOBI DICK',tempo:'7:04.23'},
+      {raia:2,matr:105572,faixa:'75+',nome:'IRAN CARLOS STALLIVIERE CORRÊA',clube:'LIRA T. C.',tempo:'4:45.12'},
+      {raia:3,matr:117706,faixa:'60+',nome:'FRIEDRICH WOLFRAM SCHILLER',clube:'TOLEDO',tempo:'4:13.44'},
+      {raia:4,matr:682,faixa:'65+',nome:'CESAR RICARDO FEUSTEL',clube:'AMARAL MASTERS',tempo:'3:10.00'},
+      {raia:5,matr:7908,faixa:'65+',nome:'LELIO BRAGA DOS SANTOS',clube:'ACQUAMASTER/FOZ',tempo:'3:25.00'},
+      {raia:6,matr:118294,faixa:'70+',nome:'MANOEL JOAQUIM DE OLIVEIRA',clube:'TOLEDO',tempo:'4:23.16'},
+      {raia:7,matr:108949,faixa:'75+',nome:'ROBERTO CASAGRANDE FILHO',clube:'APAN MARINGÁ-PR',tempo:'5:48.23'},
+    ]},
+    { serie:2, horario:'16:40', atletas:[
+      {raia:2,matr:105775,faixa:'55+',nome:'GUSTAVO SALOMAO CAMBI',clube:'MOBI DICK',tempo:'4:25.13'},
+      {raia:3,matr:105861,faixa:'55+',nome:'PAULO R PALLU',clube:'UTFPR',tempo:'3:59.59'},
+      {raia:4,matr:1412,faixa:'60+',nome:'GLAUCO ALVES DA SILVA',clube:'C.C MARINGÁ',tempo:'2:44.25'},
+      {raia:5,matr:123225,faixa:'60+',nome:'CESAR HIDEKI INADA',clube:'DKM SPORTS',tempo:'3:08.17'},
+      {raia:6,matr:121981,faixa:'55+',nome:'JOSÉ ANIZIO MACHADO',clube:'TOLEDO',tempo:'4:00.90'},
+    ]},
+    { serie:3, horario:'16:46', atletas:[
+      {raia:1,matr:128902,faixa:'45+',nome:'MAURICIO ISTAKE',clube:'FÁBRICA DE NADADORES',tempo:'4:02.68'},
+      {raia:2,matr:23956,faixa:'55+',nome:'OSMAR AMARAL ARAUJO',clube:'ACQUAMASTER/FOZ',tempo:'3:45.22'},
+      {raia:3,matr:7626,faixa:'50+',nome:'CARLO FABIANO TANNOURI',clube:'ACQUAMASTER/FOZ',tempo:'3:09.72'},
+      {raia:4,matr:112738,faixa:'55+',nome:'LUIS PAULO GOMES MASCARENHAS',clube:'C. M. PARANÁ',tempo:'3:01.17'},
+      {raia:5,matr:123326,faixa:'50+',nome:'PAULO EDUARDO FENTI',clube:'FÁBRICA DE NADADORES',tempo:'3:02.26'},
+      {raia:6,matr:105841,faixa:'50+',nome:'FABIO FRANZONI',clube:'ACQUAMASTER/FOZ',tempo:'3:25.65'},
+      {raia:7,matr:117709,faixa:'55+',nome:'ALMIR ROGERIO DENIG BANDEIRA',clube:'TOLEDO',tempo:'3:46.46'},
+    ]},
+    { serie:4, horario:'16:52', atletas:[
+      {raia:1,matr:125720,faixa:'35+',nome:'JHONATAN HENRIQUE DELFINO MACHADO',clube:'FÁBRICA DE NADADORES',tempo:'S/T'},
+      {raia:2,matr:105767,faixa:'45+',nome:'FABIO RICARDO MARQUES',clube:'SANTA MONICA',tempo:'3:00.00'},
+      {raia:3,matr:111276,faixa:'45+',nome:'RITIELER GAMA CORREA',clube:'APAN MARINGÁ-PR',tempo:'2:46.83'},
+      {raia:4,matr:105791,faixa:'40+',nome:'HEBER SANDER ZULIAN',clube:'TOLEDO',tempo:'2:33.90'},
+      {raia:5,matr:132565,faixa:'35+',nome:'MARCIO FACCI JUNIOR',clube:'APAN MARINGÁ-PR',tempo:'2:42.00'},
+      {raia:6,matr:126693,faixa:'35+',nome:'BRUNO HENRIQUE PACAGNAN',clube:'FÁBRICA DE NADADORES',tempo:'2:47.50'},
+      {raia:7,matr:113133,faixa:'35+',nome:'RENAN DA SILVA TRINTIN',clube:'APAN MARINGÁ-PR',tempo:'3:00.00'},
+    ]},
+    { serie:5, horario:'16:57', atletas:[
+      {raia:3,matr:137085,faixa:'30+',nome:'LUCAS GRZYGORCZYK',clube:'AMARACQUA',tempo:'2:48.78'},
+      {raia:4,matr:129255,faixa:'25+',nome:'JOÃO GUILHERME FIORI ORTEGA',clube:'APAN MARINGÁ-PR',tempo:'2:30.55'},
+      {raia:5,matr:112844,faixa:'35+',nome:'LUIS FELIPE DAMHA',clube:'FECAM',tempo:'2:38.00'},
+    ]},
+  ]},
+  { num:15, nome:'50 Metros Peito Feminino', horario:'17:01', termino:'17:09', series:[
+    { serie:1, horario:'17:01', atletas:[
+      {raia:1,matr:107910,faixa:'65+',nome:'MARIA APARECIDA SERT',clube:'APAN MARINGÁ-PR',tempo:'S/T'},
+      {raia:2,matr:115361,faixa:'60+',nome:'TEREZA HARUE FUGIVALA',clube:'APCEF PR',tempo:'1:07.85'},
+      {raia:3,matr:3390,faixa:'65+',nome:'PLANTINA DIAS FERNANDES',clube:'AEAPR',tempo:'55.01'},
+      {raia:4,matr:110896,faixa:'65+',nome:'RAQUEL BARROSO SAMPAIO',clube:'DKM SPORTS',tempo:'47.01'},
+      {raia:5,matr:107956,faixa:'70+',nome:'MIRIAM RANGEL',clube:'DKM SPORTS',tempo:'51.00'},
+      {raia:6,matr:7755,faixa:'65+',nome:'SHIRLEY CHOW SUEN KIU',clube:'ACQUAMASTER/FOZ',tempo:'1:06.84'},
+      {raia:7,matr:7561,faixa:'75+',nome:'NADIR BARANHUK ARNS',clube:'AMARAL MASTERS',tempo:'1:22.55'},
+    ]},
+    { serie:2, horario:'17:03', atletas:[
+      {raia:2,matr:137070,faixa:'50+',nome:'DEBORAH SABBÁ GALVÃO',clube:'CORPO LIVRE',tempo:'1:30.00'},
+      {raia:3,matr:132704,faixa:'45+',nome:'ADRIANE DEQUI PALMA',clube:'ACQUAMASTER/FOZ',tempo:'51.53'},
+      {raia:4,matr:8063,faixa:'45+',nome:'LIGIA MARIA FACCI DE CARVALHO',clube:'DKM SPORTS',tempo:'40.60'},
+      {raia:5,matr:137062,faixa:'45+',nome:'LUANA DE FATIMA SANCHES MUSSI',clube:'5º NADO',tempo:'41.00'},
+      {raia:6,matr:112780,faixa:'55+',nome:'ELISIANE MARA BRITO',clube:'APCEF PR',tempo:'59.00'},
+    ]},
+    { serie:3, horario:'17:05', atletas:[
+      {raia:1,matr:137083,faixa:'40+',nome:'CAMILA BUENO MARIANO DINIZ DOS SANTOS',clube:'AMARACQUA',tempo:'1:30.00'},
+      {raia:2,matr:126770,faixa:'35+',nome:'BRUNA DO AMARAL',clube:'AMARACQUA',tempo:'1:17.93'},
+      {raia:3,matr:136618,faixa:'35+',nome:'JACQUELINE MAGNO GOIS SANTOS',clube:'SANTA MONICA',tempo:'53.99'},
+      {raia:4,matr:116236,faixa:'35+',nome:'MIRIAN AYUMI KURAUTI',clube:'USSR/UNICAMP',tempo:'40.09'},
+      {raia:5,matr:115345,faixa:'40+',nome:'MARIANA DE CASTRO SILVA',clube:'APCEF PR',tempo:'44.42'},
+      {raia:6,matr:137029,faixa:'40+',nome:'THAYANE MENDES VIERO',clube:'SANTA MONICA',tempo:'1:00.00'},
+      {raia:7,matr:137043,faixa:'40+',nome:'VANESSA AGOSTINHO FERRAZ',clube:'C.C MARINGÁ',tempo:'1:20.00'},
+    ]},
+    { serie:4, horario:'17:07', atletas:[
+      {raia:3,matr:131328,faixa:'25+',nome:'LAURA LUIZA BAZI',clube:'TOLEDO',tempo:'59.85'},
+      {raia:4,matr:137082,faixa:'PRÉ',nome:'ALLANA POLONI LACERDA SERRAGIOLI',clube:'AMARACQUA',tempo:'38.50'},
+      {raia:5,matr:137038,faixa:'25+',nome:'ANA CAROLINA FIGUEIREDO FELIX',clube:'MASTER ACQUAFLY',tempo:'46.00'},
+    ]},
+  ]},
+  { num:16, nome:'50 Metros Peito Masculino', horario:'17:09', termino:'17:19', series:[
+    { serie:1, horario:'17:09', atletas:[
+      {raia:1,matr:124837,faixa:'65+',nome:'ARNALDO DEHE NETO',clube:'APAN MARINGÁ-PR',tempo:'S/T'},
+      {raia:2,matr:105839,faixa:'70+',nome:'EDUARDO AUGUSTO TOMANIK',clube:'FÁBRICA DE NADADORES',tempo:'1:01.70'},
+      {raia:3,matr:105879,faixa:'65+',nome:'CARLOS SUMI',clube:'TOLEDO',tempo:'48.96'},
+      {raia:4,matr:128048,faixa:'65+',nome:'FLAVIO HENRIQUE DA ROSA UREN',clube:'DKM SPORTS',tempo:'39.91'},
+      {raia:5,matr:7045,faixa:'65+',nome:'CARLOS ALBERTO FERNANDES DA SILVA',clube:'C.C MARINGÁ',tempo:'40.33'},
+      {raia:6,matr:127999,faixa:'60+',nome:'ROBERTO SIMEAO RONCATO',clube:'TOLEDO',tempo:'54.48'},
+      {raia:7,matr:108048,faixa:'60+',nome:'FERNANDO ESPINOZA',clube:'TOLEDO',tempo:'1:07.01'},
+    ]},
+    { serie:2, horario:'17:11', atletas:[
+      {raia:2,matr:131712,faixa:'55+',nome:'MARIO SERGIO SPOLADORE FILHO',clube:'AMARAL MASTERS',tempo:'40.86'},
+      {raia:3,matr:119322,faixa:'50+',nome:'MARCOS ALESSANDRO CARNEIRO',clube:'APAN MARINGÁ-PR',tempo:'39.00'},
+      {raia:4,matr:110960,faixa:'50+',nome:'JAMES ROBERTO ZOSCHKE',clube:'DKM SPORTS',tempo:'34.00'},
+      {raia:5,matr:136207,faixa:'45+',nome:'FÁBIO KOKI KITAHARA',clube:'5º NADO',tempo:'37.64'},
+      {raia:6,matr:25289,faixa:'55+',nome:'GILSON SERGIO MARTINS',clube:'ACQUAMASTER/FOZ',tempo:'39.57'},
+      {raia:7,matr:122669,faixa:'60+',nome:'MARCELO GONÇALVES BOSKOVITZ',clube:'DKM SPORTS',tempo:'42.45'},
+    ]},
+    { serie:3, horario:'17:13', atletas:[
+      {raia:1,matr:105812,faixa:'35+',nome:'BRUNO FERRARI SILVA',clube:'APAN MARINGÁ-PR',tempo:'S/T'},
+      {raia:2,matr:110972,faixa:'40+',nome:'HUGO ZENI NETO',clube:'FÁBRICA DE NADADORES',tempo:'39.38'},
+      {raia:3,matr:107907,faixa:'40+',nome:'JOSE LUIS SORIANI FILHO',clube:'FÁBRICA DE NADADORES',tempo:'36.53'},
+      {raia:4,matr:136597,faixa:'40+',nome:'LEONARDO FALEIROS TEIXEIRA',clube:'DKM SPORTS',tempo:'30.93'},
+      {raia:5,matr:132288,faixa:'45+',nome:'JULIANO NARDON NIELSEN',clube:'APAN MARINGÁ-PR',tempo:'35.80'},
+      {raia:6,matr:109619,faixa:'40+',nome:'JUNIOR CUSTÓDIO ZAMPAR',clube:'DKM SPORTS',tempo:'37.00'},
+      {raia:7,matr:137079,faixa:'40+',nome:'THIAGO FANELLI FERRAIOL',clube:'APAN MARINGÁ-PR',tempo:'41.00'},
+    ]},
+    { serie:4, horario:'17:15', atletas:[
+      {raia:1,matr:133280,faixa:'25+',nome:'JEFERSON MARTINS',clube:'AMARACQUA',tempo:'57.81'},
+      {raia:2,matr:137075,faixa:'35+',nome:'ANDRÉ MORADOR FRANÇA PAULINO',clube:'FÁBRICA DE NADADORES',tempo:'45.00'},
+      {raia:3,matr:129122,faixa:'30+',nome:'FELIPE THEODORO GUIMARAES',clube:'ACQUAMASTER/FOZ',tempo:'41.61'},
+      {raia:4,matr:128337,faixa:'30+',nome:'FELIPE DE DEUS',clube:'SANTA MONICA',tempo:'32.62'},
+      {raia:5,matr:110983,faixa:'35+',nome:'RUDÁ RYUITI FURUKITA BAPTISTA',clube:'WINNERS',tempo:'35.66'},
+      {raia:6,matr:132924,faixa:'35+',nome:'JOAO RAFAEL RONSONI',clube:'ACQUAMASTER/FOZ',tempo:'44.00'},
+      {raia:7,matr:134649,faixa:'35+',nome:'WILYAM TETSUO GONDO',clube:'TOLEDO',tempo:'47.66'},
+    ]},
+    { serie:5, horario:'17:17', atletas:[
+      {raia:3,matr:127951,faixa:'25+',nome:'VINÍCIUS DOS REIS VIEIRA',clube:'TOLEDO',tempo:'50.27'},
+      {raia:4,matr:137087,faixa:'25+',nome:'RAFAEL DE FRANÇA PEREIRA',clube:'FÁBRICA DE NADADORES',tempo:'30.05'},
+      {raia:5,matr:137084,faixa:'PRÉ',nome:'EDUARDO DINIZ',clube:'AMARACQUA',tempo:'30.40'},
+    ]},
+  ]},
+  { num:17, nome:'4 x 50 Metros Medley Feminino', horario:'17:29', termino:null, series:[
+    { serie:1, horario:'17:29', atletas:[] },
+  ]},
+  { num:18, nome:'4 x 50 Metros Medley Masculino', horario:'17:44', termino:null, series:[
+    { serie:1, horario:'17:44', atletas:[] },
+  ]},
+];
+
+// ==================== BALIZAMENTO LOGIC ====================
+const FOZ_CLUB = 'ACQUAMASTER/FOZ';
+let balFozOnly = true;
+let balAllCollapsed = true;
+
+function toggleFozOnly(btn) {
+  balFozOnly = !balFozOnly;
+  btn.classList.toggle('active', balFozOnly);
+  renderBalizamento();
+}
+
+function toggleAllProvas(btn) {
+  balAllCollapsed = !balAllCollapsed;
+  btn.textContent = balAllCollapsed ? '⊟ Recolher tudo' : '⊞ Expandir tudo';
+  document.querySelectorAll('.prova-block').forEach(b => b.classList.toggle('collapsed', balAllCollapsed));
+}
+
+function renderBalizamento() {
+  const q = (document.getElementById('balSearch')?.value || '').toLowerCase();
+  const provaFilter = document.getElementById('balProvaFilter')?.value || '';
+  const container = document.getElementById('balContainer');
+
+  // Stats
+  let totalFoz = 0, totalAtletas = 0, totalProvas = 0;
+  PROVAS_BAL.forEach(p => {
+    p.series.forEach(s => {
+      s.atletas.forEach(a => {
+        totalAtletas++;
+        if (a.clube === FOZ_CLUB) totalFoz++;
+      });
+    });
+    if (p.series.some(s => s.atletas.length)) totalProvas++;
+  });
+  document.getElementById('balStats').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${totalProvas}</div><div class="stat-lbl">Provas</div></div>
+    <div class="stat-card"><div class="stat-val">${totalAtletas}</div><div class="stat-lbl">Inscrições</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--cyan)">${totalFoz}</div><div class="stat-lbl">AcquaMaster/FOZ</div></div>
+    <div class="stat-card"><div class="stat-val">20/06</div><div class="stat-lbl">Data</div></div>
+  `;
+
+  let html = '';
+  PROVAS_BAL.forEach(prova => {
+    // filtro por número de prova
+    if (provaFilter && String(prova.num) !== provaFilter) return;
+
+    // filtra atletas
+    const provaFiltered = prova.series.map(s => ({
+      ...s,
+      atletas: s.atletas.filter(a => {
+        if (balFozOnly && a.clube !== FOZ_CLUB) return false;
+        if (q && !a.nome.toLowerCase().includes(q) && !a.clube.toLowerCase().includes(q)) return false;
+        return true;
+      })
+    })).filter(s => s.atletas.length > 0);
+
+    if (provaFiltered.length === 0) return;
+
+    const fozCount = provaFiltered.reduce((n, s) => n + s.atletas.filter(a => a.clube === FOZ_CLUB).length, 0);
+    // quando filtrando por prova específica, expande automaticamente
+    const forceOpen = provaFilter !== '';
+
+    html += `
+    <div class="prova-block ${(balAllCollapsed && !forceOpen) ? 'collapsed' : ''}" id="pb-${prova.num}">
+      <div class="prova-block-header" onclick="toggleProva(${prova.num})">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <span class="prova-num">${prova.num}ª Prova</span>
+          <span class="prova-name">${prova.nome}</span>
+        </div>
+        <div class="prova-meta">
+          ${fozCount ? `<span class="prova-foz-count">⭐ ${fozCount} da FOZ</span>` : ''}
+          <span class="prova-time">🕐 ${prova.horario}</span>
+          ${prova.termino ? `<span class="prova-time">→ ${prova.termino}</span>` : ''}
+          <span class="prova-chevron">▼</span>
+        </div>
+      </div>
+      <div class="prova-body">`;
+
+    provaFiltered.forEach(serie => {
+      html += `
+        <div class="serie-block">
+          <div class="serie-label">
+            <span>${serie.serie}ª Série</span>
+            <span>🕐 ${serie.horario}</span>
+          </div>
+          <table class="bal-table">`;
+      serie.atletas.forEach(a => {
+        const isFoz = a.clube === FOZ_CLUB;
+        const isMe = a.matr === 129122;
+        const rowClass = isMe ? 'highlight-row' : (isFoz ? 'foz-row' : '');
+        html += `
+            <tr class="${rowClass}">
+              <td class="raia-num">${a.raia}</td>
+              <td class="bal-atleta">${toTitleCase(a.nome)}${isMe ? ' <span style="color:var(--amber);font-size:0.7rem">★ você</span>' : ''}<span class="matr">#${a.matr}</span></td>
+              <td><span class="bal-faixa">${a.faixa}</span></td>
+              <td class="bal-clube"><span class="badge ${isFoz ? 'badge-foz' : 'badge-other'}">${a.clube}</span></td>
+              <td class="bal-tempo ${a.tempo === 'S/T' ? 'st' : ''}">${a.tempo}</td>
+            </tr>`;
+      });
+      html += `</table></div>`;
+    });
+
+    html += `</div></div>`;
+  });
+
+  container.innerHTML = html || `<div class="no-results-bal">🏊 Nenhum atleta encontrado com os filtros aplicados.</div>`;
+}
+
+function toggleProva(num) {
+  document.getElementById('pb-' + num).classList.toggle('collapsed');
+}
+
+// ==================== NAV ====================
+function switchTab(tab, btn) {
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('sec-'+tab).classList.add('active');
+  if (tab === 'evolucao' && !currentChart) renderChart(activeProva);
+  if (tab === 'balizamento') renderBalizamento();
+}
+
+// ==================== IMPORT ====================
+let parsedRows = [];
+let rawHeaders = [];
+
+// Drag & drop visual
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); const f = e.dataTransfer.files[0]; if(f) handleFile(f); });
+
+function handleFile(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['xlsx','xls','csv'].includes(ext)) {
+    showAlert('fileAlert','Formato inválido. Use .xlsx, .xls ou .csv','error'); return;
+  }
+  showProgress(true);
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'binary'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      if (json.length < 2) { showAlert('fileAlert','Planilha vazia ou sem dados.','error'); showProgress(false); return; }
+      rawHeaders = json[0].map(h => String(h).trim());
+      parsedRows = json.slice(1).filter(r => r.some(c => c !== ''));
+      showProgress(false);
+      showAlert('fileAlert', `✅ Arquivo carregado: <strong>${file.name}</strong> — ${parsedRows.length} linhas encontradas.`, 'success');
+      buildColMap();
+    } catch(err) {
+      showProgress(false);
+      showAlert('fileAlert', 'Erro ao ler o arquivo: ' + err.message, 'error');
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function buildColMap() {
+  const grid = document.getElementById('colMapGrid');
+  const fields = [
+    { key:'name', label:'Nome do atleta' },
+    { key:'year', label:'Ano de nascimento' },
+    { key:'sex',  label:'Sexo (M/F)' },
+    { key:'club', label:'Clube' }
+  ];
+  // auto-detect
+  const autoMap = {};
+  rawHeaders.forEach((h, i) => {
+    const hl = h.toLowerCase();
+    if (/nome|name|atleta/.test(hl)) autoMap.name = i;
+    else if (/ano|year|nasc|birth/.test(hl)) autoMap.year = i;
+    else if (/sexo|sex|genero|género/.test(hl)) autoMap.sex = i;
+    else if (/clube|club|equipe|team/.test(hl)) autoMap.club = i;
+  });
+  grid.innerHTML = fields.map(f => `
+    <div>
+      <label>${f.label}</label>
+      <select id="map_${f.key}">
+        <option value="">— selecionar coluna —</option>
+        ${rawHeaders.map((h,i) => `<option value="${i}" ${autoMap[f.key]===i?'selected':''}>${h || '(col. '+(i+1)+')'}</option>`).join('')}
+      </select>
+    </div>`).join('');
+  document.getElementById('colMapCard').style.display = 'block';
+  document.getElementById('previewCard').style.display = 'none';
+}
+
+function runPreview() {
+  const map = {};
+  ['name','year','sex','club'].forEach(k => {
+    const v = document.getElementById('map_'+k).value;
+    if (v !== '') map[k] = parseInt(v);
+  });
+  if (Object.keys(map).length < 4) {
+    alert('Mapeie todas as 4 colunas antes de pré-visualizar.'); return;
+  }
+
+  let log = '';
+  const valid = [], warns = [], errors = [];
+
+  parsedRows.forEach((row, i) => {
+    const lineNum = i + 2;
+    const name = String(row[map.name] || '').trim().toUpperCase();
+    const yearRaw = String(row[map.year] || '').trim();
+    const sex = String(row[map.sex] || '').trim().toUpperCase().charAt(0);
+    const club = String(row[map.club] || '').trim().toUpperCase();
+    const year = parseInt(yearRaw);
+
+    const errs = [];
+    if (!name) errs.push('Nome vazio');
+    if (isNaN(year) || year < 1920 || year > ANO_REF - 10) errs.push(`Ano inválido (${yearRaw})`);
+    if (!['M','F'].includes(sex)) errs.push(`Sexo inválido (${sex})`);
+    if (!club) errs.push('Clube vazio');
+
+    if (errs.length) {
+      errors.push(lineNum);
+      log += `<span class="log-err">ERRO   linha ${lineNum}: ${name||'(sem nome)'} → ${errs.join(', ')}</span>\n`;
+    } else {
+      const age = ANO_REF - year;
+      if (age < 18) { warns.push(lineNum); log += `<span class="log-warn">AVISO  linha ${lineNum}: ${name} — idade ${age} anos (menor de 18)</span>\n`; }
+      else { valid.push({name,year,sex,club,age}); log += `<span class="log-ok">OK     linha ${lineNum}: ${toTitleCase(name)} · ${year} · ${sex} · ${club}</span>\n`; }
+    }
+  });
+
+  document.getElementById('importLog').innerHTML = log || '<span class="log-ok">Nenhum dado encontrado.</span>';
+  document.getElementById('previewStats').innerHTML = `
+    <span class="tag-ok">✅ ${valid.length} válidos</span>
+    ${warns.length ? `<span class="tag-warn">⚠ ${warns.length} avisos</span>` : ''}
+    ${errors.length ? `<span class="tag-err">✕ ${errors.length} erros</span>` : ''}`;
+  document.getElementById('previewCard').style.display = 'block';
+
+  // armazena para aplicar
+  document.getElementById('btnApply')._valid = valid;
+}
+
+function applyImport() {
+  const valid = document.getElementById('btnApply')._valid;
+  if (!valid || !valid.length) { alert('Nenhum atleta válido para importar.'); return; }
+  if (!confirm(`Substituir a lista atual por ${valid.length} atletas importados?`)) return;
+  athletes = valid;
+  saveAthletes(athletes);
+  filterAthletes();
+  resetImport();
+  // Volta para aba atletas
+  document.querySelectorAll('.nav-tab')[0].click();
+  setTimeout(() => alert(`✅ ${valid.length} atletas importados com sucesso!`), 200);
+}
+
+function resetImport() {
+  document.getElementById('fileInput').value = '';
+  document.getElementById('fileAlert').innerHTML = '';
+  document.getElementById('colMapCard').style.display = 'none';
+  document.getElementById('previewCard').style.display = 'none';
+  document.getElementById('progressWrap').style.display = 'none';
+  parsedRows = []; rawHeaders = [];
+}
+
+function showAlert(id, msg, type) {
+  const map = {success:'alert-success', error:'alert-error', info:'alert-info'};
+  document.getElementById(id).innerHTML = `<div class="alert-box ${map[type]||'alert-info'}">${msg}</div>`;
+}
+
+function showProgress(show) {
+  const w = document.getElementById('progressWrap');
+  const b = document.getElementById('progressBar');
+  if (show) { w.style.display='block'; b.style.width='0%'; setTimeout(()=>b.style.width='80%',50); }
+  else { b.style.width='100%'; setTimeout(()=>{ w.style.display='none'; b.style.width='0%'; },400); }
+}
+
+function downloadTemplate() {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['Nome','Ano','Sexo','Clube'],
+    ['EXEMPLO ATLETA SILVA','1990','M','ACQUAMASTER/FOZ'],
+    ['EXEMPLO ATLETA SOUZA','1985','F','SANTA MONICA'],
+  ]);
+  ws['!cols'] = [{wch:40},{wch:8},{wch:8},{wch:30}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Atletas');
+  XLSX.writeFile(wb, 'modelo_atletas_acquamaster.xlsx');
+}
+
+// ==================== INIT ====================
+filterAthletes();
+buildProvaTabs();
+</script>
+</body>
+</html>
