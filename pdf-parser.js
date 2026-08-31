@@ -221,7 +221,9 @@ function tryParseAthleteLine(line, colBounds) {
 }
 
 function normalizeTempo(raw) {
-  if (/^S\/?T\.?$/i.test(raw)) return 'S/T';
+  // "S/T" = sem tempo (atleta ainda não tem marca registrada) — o OCR
+  // costuma confundir a barra com I/1/L, então aceita essas variações.
+  if (/^[S5][\/I1Ll]?T\.?$/i.test(raw)) return 'S/T';
   const m = raw.match(/^(\d{1,2}:\d{2}\.\d{2}|\d{1,3}\.\d{2})$/);
   return m ? m[1] : raw;
 }

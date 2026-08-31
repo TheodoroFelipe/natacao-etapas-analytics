@@ -250,6 +250,13 @@ function saveCampeonatos() { saveCampeonatosList(campeonatos); }
 
 function uid() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
+function maskDateBR(el) {
+  const digits = el.value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length > 4) el.value = digits.slice(0,2) + '/' + digits.slice(2,4) + '/' + digits.slice(4);
+  else if (digits.length > 2) el.value = digits.slice(0,2) + '/' + digits.slice(2);
+  else el.value = digits;
+}
+
 function brDateSortKey(s) {
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s || '');
   return m ? m[3]+m[2]+m[1] : '00000000';
@@ -314,7 +321,7 @@ function openNewCampeonatoModal() {
       <div class="modal-box">
         <h3>🏆 Novo campeonato</h3>
         <div class="modal-field"><label>Nome do campeonato</label><input id="cmNome" placeholder="Ex: Meeting PR/SC Masters 4ª Etapa"></div>
-        <div class="modal-field"><label>Data (DD/MM/AAAA)</label><input id="cmData" placeholder="20/06/2026"></div>
+        <div class="modal-field"><label>Data (DD/MM/AAAA)</label><input id="cmData" placeholder="20/06/2026" maxlength="10" oninput="maskDateBR(this)"></div>
         <div class="modal-field"><label>Local</label><input id="cmLocal" placeholder="Ex: Country Clube de Maringá — Maringá/PR"></div>
         <div class="modal-field"><label>Piscina</label><input id="cmPiscina" placeholder="Ex: 25m · 7 raias"></div>
         <div class="modal-actions">
