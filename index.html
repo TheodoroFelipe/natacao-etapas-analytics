@@ -27,100 +27,71 @@
     </div>
   </header>
 
-  <div class="nav-tabs">
-    <button class="nav-tab active" onclick="switchTab('atletas',this)">Atletas</button>
-    <button class="nav-tab" onclick="switchTab('balizamento',this)">🏊 Balizamento</button>
+  <div class="nav-tabs" id="mainNavTabs">
+    <button class="nav-tab active" onclick="switchTab('balizamento',this)">🏆 Campeonatos</button>
+    <button class="nav-tab" onclick="switchTab('atletas',this)">Atletas do clube</button>
     <button class="nav-tab" style="display:none" onclick="switchTab('evolucao',this)">Evolução de Tempos</button>
     <button class="nav-tab" onclick="switchTab('importar',this)">⬆ Importar Excel</button>
   </div>
 
-  <!-- ===== SEÇÃO ATLETAS ===== -->
-  <div class="section active" id="sec-atletas">
+  <!-- ===== SEÇÃO ATLETAS DO CLUBE ===== -->
+  <div class="section" id="sec-atletas">
 
-    <div id="atletasRosterView">
-      <div class="filter-bar">
-        <span class="filter-label">Sexo</span>
-        <div class="filter-group">
-          <button class="filter-chip active" onclick="setFilter('sex','todos',this)">Todos</button>
-          <button class="filter-chip" onclick="setFilter('sex','M',this)">Masculino</button>
-          <button class="filter-chip" onclick="setFilter('sex','F',this)">Feminino</button>
-        </div>
-        <div class="filter-sep"></div>
-        <span class="filter-label">Faixa etária</span>
-        <div class="filter-group">
-          <button class="filter-chip active" onclick="setFilter('age','todos',this)">Todas</button>
-          <button class="filter-chip" onclick="setFilter('age','30+',this)">30+</button>
-          <button class="filter-chip" onclick="setFilter('age','30-34',this)">30–34</button>
-          <button class="filter-chip" onclick="setFilter('age','35-39',this)">35–39</button>
-          <button class="filter-chip" onclick="setFilter('age','40-44',this)">40–44</button>
-          <button class="filter-chip" onclick="setFilter('age','45-49',this)">45–49</button>
-          <button class="filter-chip" onclick="setFilter('age','50-54',this)">50–54</button>
-          <button class="filter-chip" onclick="setFilter('age','55-59',this)">55–59</button>
-          <button class="filter-chip" onclick="setFilter('age','60+',this)">60+</button>
-        </div>
-        <div class="filter-sep"></div>
-        <input class="search-input" type="text" placeholder="Buscar atleta ou clube..." oninput="filterAthletes()">
+    <div class="filter-bar">
+      <span class="filter-label">Sexo</span>
+      <div class="filter-group">
+        <button class="filter-chip active" onclick="setFilter('sex','todos',this)">Todos</button>
+        <button class="filter-chip" onclick="setFilter('sex','M',this)">Masculino</button>
+        <button class="filter-chip" onclick="setFilter('sex','F',this)">Feminino</button>
       </div>
-
-      <div class="stats-row">
-        <div class="stat-card"><div class="stat-val" id="st-total">0</div><div class="stat-lbl">Total filtrado</div></div>
-        <div class="stat-card"><div class="stat-val" id="st-m">0</div><div class="stat-lbl">Masculino</div></div>
-        <div class="stat-card"><div class="stat-val" id="st-f">0</div><div class="stat-lbl">Feminino</div></div>
-        <div class="stat-card"><div class="stat-val" id="st-foz">0</div><div class="stat-lbl">AcquaMaster/FOZ</div></div>
-        <div class="stat-card"><div class="stat-val" id="st-inscricoes">0</div><div class="stat-lbl">Inscrições</div></div>
+      <div class="filter-sep"></div>
+      <span class="filter-label">Faixa etária</span>
+      <div class="filter-group">
+        <button class="filter-chip active" onclick="setFilter('age','todos',this)">Todas</button>
+        <button class="filter-chip" onclick="setFilter('age','30+',this)">30+</button>
+        <button class="filter-chip" onclick="setFilter('age','30-34',this)">30–34</button>
+        <button class="filter-chip" onclick="setFilter('age','35-39',this)">35–39</button>
+        <button class="filter-chip" onclick="setFilter('age','40-44',this)">40–44</button>
+        <button class="filter-chip" onclick="setFilter('age','45-49',this)">45–49</button>
+        <button class="filter-chip" onclick="setFilter('age','50-54',this)">50–54</button>
+        <button class="filter-chip" onclick="setFilter('age','55-59',this)">55–59</button>
+        <button class="filter-chip" onclick="setFilter('age','60+',this)">60+</button>
       </div>
-
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th onclick="sortBy('name')"># Nome ↕</th>
-              <th onclick="sortBy('year')">Nasc. ↕</th>
-              <th onclick="sortBy('age')">Idade ↕</th>
-              <th>Sexo</th>
-              <th onclick="sortBy('club')">Clube ↕</th>
-              <th>Provas inscritas</th>
-            </tr>
-          </thead>
-          <tbody id="tbody"></tbody>
-        </table>
-        <div class="empty-state" id="empty" style="display:none">
-          <span>🏊</span>
-          Nenhum atleta encontrado com os filtros selecionados.
-        </div>
-      </div>
+      <div class="filter-sep"></div>
+      <input class="search-input" type="text" placeholder="Buscar atleta ou clube..." oninput="filterAthletes()">
     </div>
 
-    <div id="atletasCampView" style="display:none;">
-      <div class="alert-box alert-info" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-        <span>Mostrando atletas inscritos em <strong id="campCtxNome"></strong></span>
-        <button class="btn-secondary" onclick="clearSelectedCampeonato()">✕ Ver cadastro do clube</button>
-      </div>
-
-      <div class="filter-bar" id="campAtletasFilterBar"></div>
-      <div class="stats-row" id="campAtletasStats"></div>
-
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th># Nome</th>
-              <th>Matrícula</th>
-              <th>Faixa</th>
-              <th>Sexo</th>
-              <th>Clube</th>
-              <th>Provas inscritas</th>
-            </tr>
-          </thead>
-          <tbody id="campAtletasTbody"></tbody>
-        </table>
-      </div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-val" id="st-total">0</div><div class="stat-lbl">Total filtrado</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-m">0</div><div class="stat-lbl">Masculino</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-f">0</div><div class="stat-lbl">Feminino</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-foz">0</div><div class="stat-lbl">AcquaMaster/FOZ</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-inscricoes">0</div><div class="stat-lbl">Inscrições</div></div>
     </div>
 
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortBy('name')"># Nome ↕</th>
+            <th onclick="sortBy('year')">Nasc. ↕</th>
+            <th onclick="sortBy('age')">Idade ↕</th>
+            <th>Sexo</th>
+            <th onclick="sortBy('club')">Clube ↕</th>
+            <th>Provas inscritas</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty-state" id="empty" style="display:none">
+        <span>🏊</span>
+        Nenhum atleta encontrado com os filtros selecionados.
+      </div>
+    </div>
   </div>
 
-  <!-- ===== SEÇÃO BALIZAMENTO ===== -->
-  <div class="section" id="sec-balizamento">
+  <!-- ===== SEÇÃO CAMPEONATOS / BALIZAMENTO ===== -->
+  <div class="section active" id="sec-balizamento">
 
     <div id="balListView">
       <div class="camp-list-header">
@@ -139,20 +110,47 @@
 
       <div class="bal-header-info" id="balHeaderInfo"></div>
 
-      <div id="balBrowse">
-        <div class="bal-stats" id="balStats"></div>
-        <div class="bal-filter-bar">
-          <input class="bal-search" type="text" id="balSearch" placeholder="Buscar atleta ou clube..." oninput="renderBalizamento()">
-          <button class="bal-toggle active" id="btnFozOnly" onclick="toggleFozOnly(this)">⭐ Só AcquaMaster/FOZ</button>
-          <select id="balProvaFilter" class="bal-select" onchange="renderBalizamento()">
-            <option value="">Todas as provas</option>
-          </select>
-          <button class="bal-toggle active" id="btnCollapseAll" onclick="toggleAllProvas(this)">⊟ Recolher tudo</button>
-        </div>
-        <div id="balContainer"></div>
+      <div class="nav-tabs camp-subtabs">
+        <button class="nav-tab active" id="subtab-balizamento" onclick="switchCampSubtab('balizamento',this)">🏊 Balizamento</button>
+        <button class="nav-tab" id="subtab-atletas" onclick="switchCampSubtab('atletas',this)">👥 Atletas</button>
       </div>
 
-      <div id="balPdfImport" style="display:none;"></div>
+      <div id="campSubBalizamento">
+        <div id="balBrowse">
+          <div class="bal-stats" id="balStats"></div>
+          <div class="bal-filter-bar">
+            <input class="bal-search" type="text" id="balSearch" placeholder="Buscar atleta ou clube..." oninput="renderBalizamento()">
+            <button class="bal-toggle active" id="btnFozOnly" onclick="toggleFozOnly(this)">⭐ Só AcquaMaster/FOZ</button>
+            <select id="balProvaFilter" class="bal-select" onchange="renderBalizamento()">
+              <option value="">Todas as provas</option>
+            </select>
+            <button class="bal-toggle active" id="btnCollapseAll" onclick="toggleAllProvas(this)">⊟ Recolher tudo</button>
+          </div>
+          <div id="balContainer"></div>
+        </div>
+
+        <div id="balPdfImport" style="display:none;"></div>
+      </div>
+
+      <div id="campSubAtletas" style="display:none;">
+        <div class="filter-bar" id="campAtletasFilterBar"></div>
+        <div class="stats-row" id="campAtletasStats"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th># Nome</th>
+                <th>Matrícula</th>
+                <th>Faixa</th>
+                <th>Sexo</th>
+                <th>Clube</th>
+                <th>Provas inscritas</th>
+              </tr>
+            </thead>
+            <tbody id="campAtletasTbody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 

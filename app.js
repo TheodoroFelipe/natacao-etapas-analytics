@@ -128,34 +128,30 @@ function escAttr(s) {
     .replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// ==================== ATLETAS — filtrado pelo campeonato selecionado ====================
-// Quando um campeonato está aberto (ver campeonatoAtualId em CAMPEONATOS,
-// mais abaixo), a aba Atletas mostra todo mundo inscrito nesse evento
-// (qualquer clube), em vez do cadastro fixo do clube.
+// ==================== ATLETAS — sub-aba dentro do campeonato selecionado ====================
+// Dentro da tela de um campeonato (ver CAMPEONATOS, mais abaixo), a sub-aba Atletas
+// mostra todo mundo inscrito naquele evento (qualquer clube), em vez do cadastro
+// fixo do clube (que fica na aba "Atletas do clube", no topo).
+let campSubtab = 'balizamento';
 let campAtletasAll = [];
 let campAtletaFilters = { sex:'todos', faixa:'todos' };
 
-function renderAtletasSection() {
-  const camp = getCampeonatoAtual();
-  const rosterView = document.getElementById('atletasRosterView');
-  const campView = document.getElementById('atletasCampView');
-  if (camp) {
-    rosterView.style.display = 'none';
-    campView.style.display = 'block';
-    document.getElementById('campCtxNome').textContent = camp.nome;
-    campAtletaFilters = { sex:'todos', faixa:'todos' };
-    campAtletasAll = buildAtletasFromCampeonato(camp);
-    renderCampAtletasFilterBar();
-    filterCampAtletas();
-  } else {
-    rosterView.style.display = 'block';
-    campView.style.display = 'none';
-  }
+function switchCampSubtab(name, btn) {
+  campSubtab = name;
+  document.querySelectorAll('.camp-subtabs .nav-tab').forEach(b => b.classList.remove('active'));
+  (btn || document.getElementById('subtab-' + name)).classList.add('active');
+  document.getElementById('campSubBalizamento').style.display = name === 'balizamento' ? 'block' : 'none';
+  document.getElementById('campSubAtletas').style.display = name === 'atletas' ? 'block' : 'none';
+  if (name === 'atletas') renderCampAtletasView();
 }
 
-function clearSelectedCampeonato() {
-  campeonatoAtualId = null;
-  renderAtletasSection();
+function renderCampAtletasView() {
+  const camp = getCampeonatoAtual();
+  if (!camp) return;
+  campAtletaFilters = { sex:'todos', faixa:'todos' };
+  campAtletasAll = buildAtletasFromCampeonato(camp);
+  renderCampAtletasFilterBar();
+  filterCampAtletas();
 }
 
 function buildAtletasFromCampeonato(camp) {
@@ -528,7 +524,7 @@ function deleteCampeonatoAtual() {
 
 function openCampeonato(id) {
   campeonatoAtualId = id;
-  balFozOnly = true; balAllCollapsed = true; pdfReview = null;
+  balFozOnly = true; balAllCollapsed = true; pdfReview = null; campSubtab = 'balizamento';
   renderBalizamentoSection();
 }
 
@@ -558,6 +554,8 @@ function renderCampeonatoDetail() {
   filterSel.innerHTML = '<option value="">Todas as provas</option>' +
     (camp.provas||[]).map(p => `<option value="${p.num}">${p.num}ª — ${escAttr(p.nome)}</option>`).join('');
   filterSel.value = currentVal;
+
+  switchCampSubtab(campSubtab, document.getElementById('subtab-' + campSubtab));
 
   if (pdfReview) {
     document.getElementById('balBrowse').style.display = 'none';
@@ -724,6 +722,7 @@ function saveEditAthlete(idx) {
 // ==================== IMPORT BALIZAMENTO (PDF) ====================
 function openPdfImport() {
   pdfReview = { stage: 'idle' };
+  campSubtab = 'balizamento';
   renderCampeonatoDetail();
 }
 
@@ -903,7 +902,7 @@ function confirmPdfImport() {
 
 // ==================== NAV ====================
 function switchTab(tab, btn) {
-  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('mainNavTabs').querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('sec-'+tab).classList.add('active');
@@ -918,7 +917,6 @@ function switchTab(tab, btn) {
       renderBalizamentoSection();
     }
   }
-  if (tab === 'atletas') renderAtletasSection();
 }
 
 // ==================== IMPORT (Excel — atletas) ====================
@@ -1082,6 +1080,9 @@ function downloadTemplate() {
 }
 
 // ==================== INIT ====================
+// A tela inicial é a lista de campeonatos (aba "Campeonatos") — o cadastro do
+// clube só é montado em segundo plano, pronto pra quando a aba dele for aberta.
 filterAthletes();
-renderAtletasSection();
 buildProvaTabs();
+document.getElementById('campGrid').innerHTML = `<div class="camp-empty" style="grid-column:1/-1">Carregando campeonatos…</div>`;
+campeonatosPromise.then(() => { campeonatosPromise = null; renderBalizamentoSection(); });

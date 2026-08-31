@@ -153,6 +153,8 @@ td.club { color:var(--muted); font-size:0.8rem; }
 
 .bal-actions { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:1.5rem; }
 
+.camp-subtabs { margin-bottom:1.5rem; }
+
 .bal-filter-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:1.5rem; }
 .bal-search { flex:1; min-width:180px; background:var(--inset); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.85rem; padding:7px 12px; outline:none; }
 .bal-search:focus { border-color:var(--cyan2); }
