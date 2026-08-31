@@ -128,6 +128,123 @@ function escAttr(s) {
     .replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// ==================== ATLETAS — filtrado pelo campeonato selecionado ====================
+// Quando um campeonato está aberto (ver campeonatoAtualId em CAMPEONATOS,
+// mais abaixo), a aba Atletas mostra todo mundo inscrito nesse evento
+// (qualquer clube), em vez do cadastro fixo do clube.
+let campAtletasAll = [];
+let campAtletaFilters = { sex:'todos', faixa:'todos' };
+
+function renderAtletasSection() {
+  const camp = getCampeonatoAtual();
+  const rosterView = document.getElementById('atletasRosterView');
+  const campView = document.getElementById('atletasCampView');
+  if (camp) {
+    rosterView.style.display = 'none';
+    campView.style.display = 'block';
+    document.getElementById('campCtxNome').textContent = camp.nome;
+    campAtletaFilters = { sex:'todos', faixa:'todos' };
+    campAtletasAll = buildAtletasFromCampeonato(camp);
+    renderCampAtletasFilterBar();
+    filterCampAtletas();
+  } else {
+    rosterView.style.display = 'block';
+    campView.style.display = 'none';
+  }
+}
+
+function clearSelectedCampeonato() {
+  campeonatoAtualId = null;
+  renderAtletasSection();
+}
+
+function buildAtletasFromCampeonato(camp) {
+  const map = new Map();
+  (camp.provas||[]).forEach(prova => {
+    const sex = /feminino/i.test(prova.nome) ? 'F' : /masculino/i.test(prova.nome) ? 'M' : null;
+    (prova.series||[]).forEach(serie => {
+      (serie.atletas||[]).forEach(a => {
+        const key = a.matr || (a.nome + '|' + a.clube);
+        if (!map.has(key)) map.set(key, { matr:a.matr, nome:a.nome, clube:a.clube, faixa:a.faixa, sex, provas:[] });
+        const entry = map.get(key);
+        if (!entry.faixa && a.faixa) entry.faixa = a.faixa;
+        if (!entry.sex && sex) entry.sex = sex;
+        if (!entry.provas.some(p => p.num === prova.num)) entry.provas.push({ num:prova.num, nome:prova.nome });
+      });
+    });
+  });
+  return [...map.values()];
+}
+
+function renderCampAtletasFilterBar() {
+  const faixas = [...new Set(campAtletasAll.map(a => a.faixa).filter(Boolean))]
+    .sort((a,b) => (parseInt(a,10)||0) - (parseInt(b,10)||0));
+  document.getElementById('campAtletasFilterBar').innerHTML = `
+    <span class="filter-label">Sexo</span>
+    <div class="filter-group">
+      <button class="filter-chip ${campAtletaFilters.sex==='todos'?'active':''}" onclick="setCampAtletaFilter('sex','todos',this)">Todos</button>
+      <button class="filter-chip ${campAtletaFilters.sex==='M'?'active':''}" onclick="setCampAtletaFilter('sex','M',this)">Masculino</button>
+      <button class="filter-chip ${campAtletaFilters.sex==='F'?'active':''}" onclick="setCampAtletaFilter('sex','F',this)">Feminino</button>
+    </div>
+    <div class="filter-sep"></div>
+    <span class="filter-label">Faixa</span>
+    <div class="filter-group">
+      <button class="filter-chip ${campAtletaFilters.faixa==='todos'?'active':''}" onclick="setCampAtletaFilter('faixa','todos',this)">Todas</button>
+      ${faixas.map(f => `<button class="filter-chip ${campAtletaFilters.faixa===f?'active':''}" onclick="setCampAtletaFilter('faixa','${escAttr(f)}',this)">${escAttr(f)}</button>`).join('')}
+    </div>
+    <div class="filter-sep"></div>
+    <input class="search-input" type="text" id="campAtletaSearch" placeholder="Buscar atleta ou clube..." oninput="filterCampAtletas()">
+  `;
+}
+
+function setCampAtletaFilter(type, val, btn) {
+  campAtletaFilters[type] = val;
+  btn.closest('.filter-group').querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterCampAtletas();
+}
+
+function filterCampAtletas() {
+  const q = (document.getElementById('campAtletaSearch')?.value || '').toLowerCase();
+  let list = campAtletasAll.filter(a => {
+    if (campAtletaFilters.sex !== 'todos' && a.sex !== campAtletaFilters.sex) return false;
+    if (campAtletaFilters.faixa !== 'todos' && a.faixa !== campAtletaFilters.faixa) return false;
+    if (q && !a.nome.toLowerCase().includes(q) && !a.clube.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  list.sort((a,b) => a.nome.localeCompare(b.nome));
+  renderCampAtletasTable(list);
+}
+
+function renderCampAtletasTable(list) {
+  document.getElementById('campAtletasStats').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${list.length}</div><div class="stat-lbl">Total filtrado</div></div>
+    <div class="stat-card"><div class="stat-val">${list.filter(a=>a.sex==='M').length}</div><div class="stat-lbl">Masculino</div></div>
+    <div class="stat-card"><div class="stat-val">${list.filter(a=>a.sex==='F').length}</div><div class="stat-lbl">Feminino</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--cyan)">${list.filter(a=>a.clube===FOZ_CLUB).length}</div><div class="stat-lbl">AcquaMaster/FOZ</div></div>
+  `;
+  const tbody = document.getElementById('campAtletasTbody');
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--muted);">Nenhum atleta encontrado com os filtros aplicados.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map((a,i) => {
+    const isFoz = a.clube === FOZ_CLUB;
+    const provasBadges = a.provas.map(p =>
+      `<span title="${escAttr(p.nome)}" style="font-family:'DM Mono',monospace;font-size:0.65rem;padding:1px 5px;border-radius:3px;background:rgba(0,212,255,0.08);color:var(--cyan);border:1px solid rgba(0,212,255,0.2);white-space:nowrap;">${p.num}ª</span>`
+    ).join(' ');
+    return `
+    <tr>
+      <td class="name">${i+1}. ${toTitleCase(a.nome)}</td>
+      <td class="year">${a.matr ?? '—'}</td>
+      <td><span class="bal-faixa">${escAttr(a.faixa || '—')}</span></td>
+      <td><span class="${a.sex==='M'?'sex-m':'sex-f'}" style="font-size:0.75rem;">${a.sex || '—'}</span></td>
+      <td class="club"><span class="badge ${isFoz?'badge-foz':'badge-other'}">${escAttr(a.clube)}</span></td>
+      <td style="font-size:0.78rem;">${provasBadges}</td>
+    </tr>`;
+  }).join('');
+}
+
 // ==================== CHART (Evolução — aba oculta por enquanto) ====================
 const provas = {
   peito50:{ label:'50m Peito', metrics:{record:'41.61',evento:'1º · Londrina mai/26',melhora:'−4.0s vs mar/25'},
@@ -750,6 +867,7 @@ function switchTab(tab, btn) {
   document.getElementById('sec-'+tab).classList.add('active');
   if (tab === 'evolucao' && !currentChart) renderChart(activeProva);
   if (tab === 'balizamento') renderBalizamentoSection();
+  if (tab === 'atletas') renderAtletasSection();
 }
 
 // ==================== IMPORT (Excel — atletas) ====================
@@ -914,4 +1032,5 @@ function downloadTemplate() {
 
 // ==================== INIT ====================
 filterAthletes();
+renderAtletasSection();
 buildProvaTabs();
