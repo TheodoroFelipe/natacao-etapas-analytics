@@ -11,19 +11,24 @@ natacao-etapas-analytics-main/
 ├── app.js                ← lógica da aplicação (atletas, campeonatos, balizamento, import)
 ├── pdf-parser.js         ← extração do balizamento a partir do PDF (render + OCR)
 ├── default-athletes.js   ← lista padrão de atletas do clube
-├── seed-3etapa.js        ← dados históricos da 3ª Etapa (migrados na primeira carga)
+├── seed-3etapa.js        ← dados históricos da 3ª Etapa (fallback local se o servidor cair)
+├── api/campeonatos.js    ← função serverless (Node) — GET/PUT dos campeonatos no Postgres
+├── package.json          ← dependência da função serverless (@neondatabase/serverless)
 └── vercel.json           ← configuração de deploy
 ```
 
-Sem build step — é só HTML/CSS/JS estático, com Chart.js, SheetJS (xlsx), pdf.js e
-Tesseract.js carregados via CDN.
+Front-end sem build step — é só HTML/CSS/JS estático, com Chart.js, SheetJS (xlsx),
+pdf.js e Tesseract.js carregados via CDN. A única parte com build é a função
+serverless em `api/`, que a própria Vercel empacota.
 
 ## Abas
 
-- **Atletas** — cadastro dos atletas do clube, com filtros e busca.
+- **Atletas** — cadastro dos atletas do clube, com filtros e busca. Fica salvo só no
+  navegador de cada pessoa (localStorage) — ver "Atualizar a lista de atletas" abaixo.
 - **Balizamento** — lista de campeonatos cadastrados; cada um guarda seu próprio
   balizamento (provas, séries, atletas de todos os clubes daquele evento), preservando
-  histórico entre etapas.
+  histórico entre etapas. **Guardado num banco Postgres compartilhado** — todo mundo que
+  acessa o painel vê os mesmos campeonatos (ver "Banco de dados" abaixo).
 - **Importar Excel** — atualiza a lista de atletas do clube a partir de uma planilha.
 - **Evolução de Tempos** — oculta por enquanto (aba fica pronta no código pra retomar
   depois; ver `sec-evolucao` em `index.html` e `renderChart`/`provas` em `app.js`).
@@ -51,40 +56,46 @@ não em um servidor) — a tela mostra o progresso página a página.
 
 ## Deploy no Vercel
 
-### Opção 1 — Via Vercel CLI (recomendado)
+### 1. Deploy do projeto
+
+Via Vercel CLI:
 
 ```bash
-# Instalar a CLI do Vercel (se ainda não tiver)
 npm install -g vercel
-
-# Dentro da pasta do projeto
 cd natacao-etapas-analytics-main
-
-# Fazer login (abre o navegador)
 vercel login
-
-# Deploy (primeira vez — segue o wizard)
-vercel
-
-# Deploy de atualização (depois da primeira vez)
-vercel --prod
+vercel          # primeira vez — segue o wizard, vincula ao repo do GitHub
+vercel --prod   # deploys seguintes
 ```
 
-### Opção 2 — Via GitHub + Vercel Dashboard
+Ou via GitHub + Dashboard: acesse https://vercel.com → **Add New Project** → conecte o
+repositório `natacao-etapas-analytics` → **Deploy** (configurações padrão, sem
+framework). Assim, todo `git push` na branch principal já gera um deploy novo.
 
-1. Suba esta pasta para um repositório no GitHub
-2. Acesse https://vercel.com e clique em **Add New Project**
-3. Conecte o repositório
-4. Nas configurações, deixe tudo padrão (projeto estático, sem build)
-5. Clique em **Deploy**
+### 2. Banco de dados (Postgres/Neon) — obrigatório pra Balizamento funcionar
 
-### Opção 3 — Arrastar e soltar (mais rápido para testes)
+Os campeonatos ficam num banco Postgres compartilhado (provisionado como Neon, pelo
+Marketplace da Vercel), pra todos os colegas verem o mesmo balizamento.
 
-1. Acesse https://vercel.com/new
-2. Arraste a pasta `natacao-etapas-analytics-main` inteira para a área indicada
-3. Aguarde o deploy — URL gerada automaticamente
+No dashboard do projeto: aba **Storage** → **Marketplace** → **Neon** → criar banco e
+conectar a este projeto. Isso adiciona automaticamente a variável de ambiente
+`DATABASE_URL`. Ou pela CLI:
+
+```bash
+vercel integration add neon
+```
+
+A tabela `campeonatos` é criada sozinha na primeira chamada da API — não tem migração
+manual pra rodar. Depois de conectar o banco, faça mais um `vercel --prod` pra função
+`api/campeonatos.js` enxergar a variável de ambiente nova.
+
+**Primeiro acesso depois de conectar o banco:** se algum navegador já tinha campeonatos
+salvos localmente (de antes da migração), o painel publica esses dados automaticamente
+pro banco assim que detecta que ele está vazio — não precisa reimportar nada na mão.
 
 ## Atualizar a lista de atletas
 
 Use a aba **Importar Excel** dentro do próprio painel (upload → mapear colunas →
-pré-visualizar → aplicar). Os dados ficam salvos no navegador (localStorage).
+pré-visualizar → aplicar). Os dados ficam salvos só no navegador de quem importou
+(localStorage) — cada colega precisa importar a planilha no seu próprio navegador pra
+ver a lista atualizada.

@@ -336,13 +336,36 @@ const FOZ_CLUB = 'ACQUAMASTER/FOZ';
 const MY_MATR = 129122;
 const CAMPEONATOS_KEY = 'acquamaster_campeonatos_v1';
 
-let campeonatos = loadCampeonatos();
-let campeonatoAtualId = null;
-let balFozOnly = true;
-let balAllCollapsed = true;
-let pdfReview = null; // { provas, warnings } em edição, antes de salvar
+// Fonte da verdade é o banco (Postgres, via /api/campeonatos) — compartilhado entre
+// todos os colegas. O localStorage vira só uma cópia de emergência pra quando o
+// servidor estiver fora do ar (o painel continua funcionando, só que sem sincronizar).
+async function fetchCampeonatos() {
+  try {
+    const res = await fetch('/api/campeonatos');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!Array.isArray(data)) throw new Error('resposta inválida do servidor');
+    if (data.length === 0) {
+      // banco vazio (primeiro deploy): se este navegador já tinha campeonatos
+      // salvos localmente, publica pro servidor pra virar o dado compartilhado.
+      const cached = loadCampeonatosCache();
+      if (cached.length) {
+        campeonatos = cached;
+        saveCampeonatos();
+        return campeonatos;
+      }
+    }
+    campeonatos = data;
+    saveCampeonatosCache(data);
+    return data;
+  } catch (e) {
+    console.error('Não foi possível carregar campeonatos do servidor, usando cópia local:', e);
+    campeonatos = loadCampeonatosCache();
+    return campeonatos;
+  }
+}
 
-function loadCampeonatos() {
+function loadCampeonatosCache() {
   try {
     const saved = localStorage.getItem(CAMPEONATOS_KEY);
     if (saved) {
@@ -350,20 +373,39 @@ function loadCampeonatos() {
       if (Array.isArray(parsed)) return parsed;
     }
   } catch(e) {}
-  // primeira carga: migra o evento hardcoded do protótipo original pro histórico
-  const seed = [{
+  // sem servidor e sem cópia local: usa o histórico embutido no código como ponto de partida
+  return [{
     id: 'seed-3etapa-2026',
     nome: EVENTO.nome, data: EVENTO.data, local: EVENTO.local, piscina: EVENTO.piscina,
     provas: PROVAS_BAL
   }];
-  saveCampeonatosList(seed);
-  return seed;
 }
 
-function saveCampeonatosList(list) {
+function saveCampeonatosCache(list) {
   try { localStorage.setItem(CAMPEONATOS_KEY, JSON.stringify(list)); } catch(e) {}
 }
-function saveCampeonatos() { saveCampeonatosList(campeonatos); }
+
+async function saveCampeonatos() {
+  saveCampeonatosCache(campeonatos);
+  try {
+    const res = await fetch('/api/campeonatos', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(campeonatos)
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+  } catch (e) {
+    console.error('Falha ao salvar campeonatos no servidor:', e);
+    alert('Não foi possível salvar no servidor — suas alterações podem não aparecer para os colegas. Verifique sua conexão e tente novamente.');
+  }
+}
+
+let campeonatos = [];
+let campeonatoAtualId = null;
+let campeonatosPromise = fetchCampeonatos();
+let balFozOnly = true;
+let balAllCollapsed = true;
+let pdfReview = null; // { provas, warnings } em edição, antes de salvar
 
 function uid() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
@@ -866,7 +908,16 @@ function switchTab(tab, btn) {
   btn.classList.add('active');
   document.getElementById('sec-'+tab).classList.add('active');
   if (tab === 'evolucao' && !currentChart) renderChart(activeProva);
-  if (tab === 'balizamento') renderBalizamentoSection();
+  if (tab === 'balizamento') {
+    if (campeonatosPromise) {
+      document.getElementById('balListView').style.display = 'block';
+      document.getElementById('balDetailView').style.display = 'none';
+      document.getElementById('campGrid').innerHTML = `<div class="camp-empty" style="grid-column:1/-1">Carregando campeonatos…</div>`;
+      campeonatosPromise.then(() => { campeonatosPromise = null; renderBalizamentoSection(); });
+    } else {
+      renderBalizamentoSection();
+    }
+  }
   if (tab === 'atletas') renderAtletasSection();
 }
 

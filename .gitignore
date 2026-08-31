@@ -1,2 +1,6 @@
 .DS_Store
 *.pdf
+node_modules
+.vercel
+.env
+.env.local

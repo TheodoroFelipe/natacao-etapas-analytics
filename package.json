@@ -1,0 +1,8 @@
+{
+  "name": "acquamaster-painel-masters",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2"
+  }
+}
